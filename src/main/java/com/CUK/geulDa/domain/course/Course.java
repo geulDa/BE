@@ -1,12 +1,13 @@
 package com.CUK.geulDa.domain.course;
 
 import com.CUK.geulDa.domain.member.Member;
+import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 
 @Entity
 @Getter
-public class Course {
+public class Course extends BaseEntity {
 
     @Id
     private String id;
@@ -38,7 +39,6 @@ public class Course {
         this.stayDuration = stayDuration;
         this.transportMode = transportMode;
         this.desiredPlaces = desiredPlaces;
-        this.aiResult = aiResult;
     }
 
 }

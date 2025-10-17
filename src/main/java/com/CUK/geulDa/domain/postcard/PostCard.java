@@ -1,12 +1,13 @@
 package com.CUK.geulDa.domain.postcard;
 
 import com.CUK.geulDa.domain.place.Place;
+import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 
 @Entity
 @Getter
-public class PostCard {
+public class PostCard extends BaseEntity {
 
     @Id
     private String id;

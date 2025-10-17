@@ -2,6 +2,7 @@ package com.CUK.geulDa.domain.postcard;
 
 import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.place.Place;
+import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -9,7 +10,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Getter
-public class UserPostCard {
+public class UserPostCard extends BaseEntity {
 
     @Id
     private String id;

@@ -3,6 +3,7 @@ package com.CUK.geulDa.domain.member;
 import com.CUK.geulDa.domain.course.Course;
 import com.CUK.geulDa.domain.postcard.UserPostCard;
 import com.CUK.geulDa.domain.stamp.Stamp;
+import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -11,7 +12,7 @@ import java.util.List;
 
 @Entity
 @Getter
-public class Member {
+public class Member extends BaseEntity {
 
     @Id
     private String id;
@@ -30,7 +31,7 @@ public class Member {
         this.email = email;
     }
 
-    // 연관관계 (편의상 단방향)
+    // 연관관계
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Stamp> stamps = new ArrayList<>();
 

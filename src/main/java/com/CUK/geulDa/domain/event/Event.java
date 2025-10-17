@@ -1,13 +1,14 @@
 package com.CUK.geulDa.domain.event;
 
 import com.CUK.geulDa.domain.member.Member;
+import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import java.time.LocalDate;
 
 @Entity
 @Getter
-public class Event {
+public class Event extends BaseEntity {
 
     @Id
     private String id;
@@ -51,7 +52,7 @@ public class Event {
     }
 
     // 메서드 관리
-    public void toggleBookmark() {
+    public void memberBookmark() {
         this.isBookmarked = !this.isBookmarked;
     }
 

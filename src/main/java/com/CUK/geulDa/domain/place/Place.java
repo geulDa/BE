@@ -1,6 +1,7 @@
 package com.CUK.geulDa.domain.place;
 
 import com.CUK.geulDa.domain.postcard.PostCard;
+import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
 
@@ -9,7 +10,7 @@ import java.util.List;
 
 @Entity
 @Getter
-public class Place {
+public class Place extends BaseEntity{
 
     @Id
     private String id;
@@ -47,11 +48,11 @@ public class Place {
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.isHidden = isHidden;
         this.video = video;
         this.placeImg = placeImg;
     }
 
+    // 연관관계
     @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PostCard> postcards = new ArrayList<>();
 }
