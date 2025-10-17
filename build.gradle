@@ -24,6 +24,9 @@ repositories {
 	mavenCentral()
 }
 
+// 테스트용 gradle 분리
+apply from: 'test.gradle'
+
 dependencies {
     // Spring
     testImplementation 'org.springframework.boot:spring-boot-starter-test'

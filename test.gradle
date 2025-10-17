@@ -1,0 +1,48 @@
+plugins {
+    id 'jacoco'
+}
+
+dependencies {
+    // 테스트
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.mockito:mockito-core'
+    testImplementation 'org.assertj:assertj-core'
+    testImplementation 'com.h2database:h2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    finalizedBy(tasks.jacocoTestReport)
+}
+
+// 테스트 시각화
+tasks.jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+        html.outputLocation = layout.buildDirectory.dir('jacocoHtml')
+    }
+    finalizedBy(tasks.jacocoTestCoverageVerification)
+}
+
+// 커버리지 80%
+tasks.jacocoTestCoverageVerification {
+    dependsOn test
+    violationRules {
+        rule {
+            element = 'CLASS'
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+        }
+    }
+}
