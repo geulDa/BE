@@ -1,0 +1,64 @@
+package com.CUK.geulDa.domain.memberEventBookmark.service;
+
+import java.util.UUID;
+
+import org.springframework.stereotype.Service;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.CUK.geulDa.domain.event.Event;
+import com.CUK.geulDa.domain.event.repository.EventRepository;
+import com.CUK.geulDa.domain.member.Member;
+import com.CUK.geulDa.domain.member.repository.MemberRepository;
+import com.CUK.geulDa.domain.memberEventBookmark.MemberEventBookmark;
+import com.CUK.geulDa.domain.memberEventBookmark.repository.MemberEventBookmarkRepository;
+import com.CUK.geulDa.global.apiReponse.code.ErrorCode;
+import com.CUK.geulDa.global.apiReponse.code.SuccessCode;
+import com.CUK.geulDa.global.apiReponse.exception.BusinessException;
+import com.CUK.geulDa.global.apiReponse.response.ApiResponse;
+
+@Service
+@RequiredArgsConstructor
+@Transactional
+public class MemberEventBookmarkService {
+
+	private final MemberRepository memberRepository;
+	private final EventRepository eventRepository;
+	private final MemberEventBookmarkRepository bookmarkRepository;
+
+	/**
+	 * 북마크 추가
+	 */
+	public ApiResponse<Void> addBookmark(String memberId, String eventId) {
+		Member member = memberRepository.findById(memberId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 회원을 찾을 수 없습니다."));
+
+		Event event = eventRepository.findById(eventId)
+			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 행사를 찾을 수 없습니다."));
+
+		boolean exists = bookmarkRepository.existsByMemberIdAndEventId(memberId, eventId);
+		if (exists) {
+			throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE, "이미 북마크한 행사입니다.");
+		}
+
+		MemberEventBookmark bookmark = new MemberEventBookmark(UUID.randomUUID().toString(), member, event);
+		bookmarkRepository.save(bookmark);
+
+		return ApiResponse.success(SuccessCode.SUCCESS_CREATE, null);
+	}
+
+	/**
+	 * 북마크 삭제
+	 */
+	public ApiResponse<Void> removeBookmark(String memberId, String eventId) {
+		boolean exists = bookmarkRepository.existsByMemberIdAndEventId(memberId, eventId);
+		if (!exists) {
+			throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "북마크되지 않은 행사입니다.");
+		}
+
+		bookmarkRepository.deleteByMemberIdAndEventId(memberId, eventId);
+		return ApiResponse.success(SuccessCode.SUCCESS_DELETE, null);
+	}
+
+}

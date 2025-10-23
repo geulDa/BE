@@ -6,9 +6,15 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface MemberEventBookmarkRepository extends JpaRepository<MemberEventBookmark, String> {
 
+	boolean existsByMemberIdAndEventId(String memberId, String eventId);
+
+	void deleteByMemberIdAndEventId(String memberId, String eventId);
+
+	Optional<MemberEventBookmark> findByMemberIdAndEventId(String memberId, String eventId);
 
     @Query("SELECT DISTINCT meb FROM MemberEventBookmark meb " +
            "JOIN FETCH meb.event " +
