@@ -1,6 +1,5 @@
 package com.CUK.geulDa.domain.event;
 
-import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
 import lombok.Getter;
@@ -12,10 +11,6 @@ public class Event extends BaseEntity {
 
     @Id
     private String id;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id")
-    private Member member;
 
     private String title;
 
@@ -30,8 +25,6 @@ public class Event extends BaseEntity {
     private String externalUrl;
 
     private String imageUrl;
-
-    private Boolean isBookmarked;
 
     // 기본 생성자
     protected Event() {}
@@ -48,12 +41,5 @@ public class Event extends BaseEntity {
         this.endDate = endDate;
         this.externalUrl = externalUrl;
         this.imageUrl = imageUrl;
-        this.isBookmarked = false;
     }
-
-    // 메서드 관리
-    public void memberBookmark() {
-        this.isBookmarked = !this.isBookmarked;
-    }
-
 }
