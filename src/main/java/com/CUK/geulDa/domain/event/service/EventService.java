@@ -2,12 +2,20 @@ package com.CUK.geulDa.domain.event.service;
 
 import com.CUK.geulDa.domain.event.Event;
 import com.CUK.geulDa.domain.event.dto.EventDetailResponse;
+import com.CUK.geulDa.domain.event.dto.EventListResponse;
 import com.CUK.geulDa.domain.event.repository.EventRepository;
+import com.CUK.geulDa.domain.memberEventBookmark.MemberEventBookmark;
+import com.CUK.geulDa.domain.memberEventBookmark.repository.MemberEventBookmarkRepository;
 import com.CUK.geulDa.global.apiReponse.code.ErrorCode;
 import com.CUK.geulDa.global.apiReponse.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -15,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class EventService {
 
     private final EventRepository eventRepository;
+    private final MemberEventBookmarkRepository bookmarkRepository;
 
     /**
      * 행사 상세 조회
@@ -29,5 +38,18 @@ public class EventService {
                 ));
 
         return new EventDetailResponse(event);
+    }
+
+    public List<EventListResponse> getEventsByDate(LocalDate targetDate, String memberId) {
+        List<Event> events = eventRepository.findByDate(targetDate);
+
+        List<MemberEventBookmark> bookmarks = bookmarkRepository.findByMemberIdWithEvent(memberId);
+        Set<String> bookmarkedEventIds = bookmarks.stream()
+                .map(bookmark -> bookmark.getEvent().getId())
+                .collect(Collectors.toSet());
+
+        return events.stream()
+                .map(event -> new EventListResponse(event, bookmarkedEventIds.contains(event.getId())))
+                .collect(Collectors.toList());
     }
 }
