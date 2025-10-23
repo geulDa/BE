@@ -23,14 +23,11 @@ public class MemberEventBookmark extends BaseEntity {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
-    private LocalDateTime bookmarkedAt;
-
     protected MemberEventBookmark() {}
 
     public MemberEventBookmark(String id, Member member, Event event) {
         this.id = id;
         this.member = member;
         this.event = event;
-        this.bookmarkedAt = LocalDateTime.now();
     }
 }
