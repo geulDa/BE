@@ -11,6 +11,7 @@ import java.util.List;
 public interface EventRepository extends JpaRepository<Event, String> {
 
     @Query("SELECT e FROM Event e " +
-           "WHERE :targetDate BETWEEN e.startDate AND e.endDate")
+           "WHERE :targetDate BETWEEN e.startDate AND e.endDate " +
+           "ORDER BY e.id")
     List<Event> findByDate(@Param("targetDate") LocalDate targetDate);
 }
