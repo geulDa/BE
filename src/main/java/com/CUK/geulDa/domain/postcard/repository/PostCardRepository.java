@@ -13,4 +13,7 @@ public interface PostCardRepository extends JpaRepository<PostCard, String> {
            "JOIN FETCH pc.place " +
            "WHERE pc.id = :postcardId")
     Optional<PostCard> findByIdWithPlace(@Param("postcardId") String postcardId);
+
+    @Query("SELECT pc FROM PostCard pc WHERE pc.place.id = :placeId AND pc.isHidden = false")
+    Optional<PostCard> findByPlaceId(@Param("placeId") String placeId);
 }

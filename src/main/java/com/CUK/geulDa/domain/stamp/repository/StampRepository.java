@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface StampRepository extends JpaRepository<Stamp, String> {
 
@@ -14,4 +15,7 @@ public interface StampRepository extends JpaRepository<Stamp, String> {
 
     @Query("SELECT COUNT(s) FROM Stamp s WHERE s.member.id = :memberId AND s.isCompleted = true")
     long countCompletedStampsByMemberId(@Param("memberId") String memberId);
+
+    @Query("SELECT s FROM Stamp s WHERE s.member.id = :memberId AND s.place.id = :placeId")
+    Optional<Stamp> findByMemberIdAndPlaceId(@Param("memberId") String memberId, @Param("placeId") String placeId);
 }
