@@ -38,6 +38,10 @@ public class Place extends BaseEntity{
     // 장소 이미지
     private String placeImg;
 
+    // 스탬프 획득 시 시스템 메시지
+    @Column(columnDefinition = "TEXT")
+    private String systemMessage;
+
     protected Place() {}
 
     public Place(String id, String name, String description, String address,
