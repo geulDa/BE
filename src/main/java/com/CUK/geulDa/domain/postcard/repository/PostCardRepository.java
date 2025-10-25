@@ -7,13 +7,13 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface PostCardRepository extends JpaRepository<PostCard, String> {
+public interface PostCardRepository extends JpaRepository<PostCard, Long> {
 
     @Query("SELECT pc FROM PostCard pc " +
            "JOIN FETCH pc.place " +
            "WHERE pc.id = :postcardId")
-    Optional<PostCard> findByIdWithPlace(@Param("postcardId") String postcardId);
+    Optional<PostCard> findByIdWithPlace(@Param("postcardId") Long postcardId);
 
     @Query("SELECT pc FROM PostCard pc WHERE pc.place.id = :placeId AND pc.isHidden = false")
-    Optional<PostCard> findByPlaceId(@Param("placeId") String placeId);
+    Optional<PostCard> findByPlaceId(@Param("placeId") Long placeId);
 }

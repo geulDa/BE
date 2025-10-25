@@ -7,8 +7,8 @@ import com.CUK.geulDa.domain.event.dto.NextEventResponse;
 import com.CUK.geulDa.domain.event.repository.EventRepository;
 import com.CUK.geulDa.domain.memberEventBookmark.MemberEventBookmark;
 import com.CUK.geulDa.domain.memberEventBookmark.repository.MemberEventBookmarkRepository;
-import com.CUK.geulDa.global.apiReponse.code.ErrorCode;
-import com.CUK.geulDa.global.apiReponse.exception.BusinessException;
+import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
+import com.CUK.geulDa.global.apiResponse.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,7 +32,7 @@ public class EventService {
      * @param eventId 행사 ID
      * @return 행사 상세 정보
      */
-    public EventDetailResponse getEventDetail(String eventId) {
+    public EventDetailResponse getEventDetail(Long eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.RESOURCE_NOT_FOUND,
@@ -76,11 +76,11 @@ public class EventService {
         return nextEvents;
     }
 
-    public List<EventListResponse> getEventsByDate(LocalDate targetDate, String memberId) {
+    public List<EventListResponse> getEventsByDate(LocalDate targetDate, Long memberId) {
         List<Event> events = eventRepository.findByDate(targetDate);
 
         List<MemberEventBookmark> bookmarks = bookmarkRepository.findByMemberIdWithEvent(memberId);
-        Set<String> bookmarkedEventIds = bookmarks.stream()
+        Set<Long> bookmarkedEventIds = bookmarks.stream()
                 .map(bookmark -> bookmark.getEvent().getId())
                 .collect(Collectors.toSet());
 

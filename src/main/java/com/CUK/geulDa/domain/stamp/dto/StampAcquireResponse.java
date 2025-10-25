@@ -1,7 +1,7 @@
 package com.CUK.geulDa.domain.stamp.dto;
 
 public record StampAcquireResponse(
-        String stampId,
+        Long stampId,
         String video,
         String systemMessage,
         PostcardInfo postcard

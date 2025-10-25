@@ -4,16 +4,19 @@ import com.CUK.geulDa.domain.event.Event;
 import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
-
-import java.time.LocalDateTime;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class MemberEventBookmark extends BaseEntity {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
@@ -23,10 +26,8 @@ public class MemberEventBookmark extends BaseEntity {
     @JoinColumn(name = "event_id", nullable = false)
     private Event event;
 
-    protected MemberEventBookmark() {}
-
-    public MemberEventBookmark(String id, Member member, Event event) {
-        this.id = id;
+    @Builder
+    public MemberEventBookmark(Member member, Event event) {
         this.member = member;
         this.event = event;
     }

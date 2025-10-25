@@ -3,8 +3,8 @@ package com.CUK.geulDa.domain.event.controller;
 import com.CUK.geulDa.domain.event.dto.EventDetailResponse;
 import com.CUK.geulDa.domain.event.dto.EventListResponse;
 import com.CUK.geulDa.domain.event.service.EventService;
-import com.CUK.geulDa.global.apiReponse.code.SuccessCode;
-import com.CUK.geulDa.global.apiReponse.response.ApiResponse;
+import com.CUK.geulDa.global.apiResponse.code.SuccessCode;
+import com.CUK.geulDa.global.apiResponse.response.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,14 +27,14 @@ public class EventController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<EventListResponse>>> getEventsByDate(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam String memberId) {
+            @RequestParam Long memberId) {
         List<EventListResponse> events = eventService.getEventsByDate(date, memberId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, events));
     }
 
     @Operation(summary = "행사 상세 조회", description = "행사의 상세 정보를 조회합니다.")
     @GetMapping("/{eventId}")
-    public ResponseEntity<ApiResponse<EventDetailResponse>> getEventDetail(@PathVariable String eventId) {
+    public ResponseEntity<ApiResponse<EventDetailResponse>> getEventDetail(@PathVariable Long eventId) {
         EventDetailResponse event = eventService.getEventDetail(eventId);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, event));
     }

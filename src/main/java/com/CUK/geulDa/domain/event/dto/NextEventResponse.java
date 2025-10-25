@@ -3,7 +3,7 @@ package com.CUK.geulDa.domain.event.dto;
 import com.CUK.geulDa.domain.event.Event;
 
 public record NextEventResponse(
-        String eventId,
+        Long eventId,
         String title,
         String imageUrl
 ) {
