@@ -1,4 +1,4 @@
-package com.CUK.geulDa.global.apiReponse.code;
+package com.CUK.geulDa.global.apiResponse.code;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;

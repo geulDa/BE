@@ -1,4 +1,4 @@
-package com.CUK.geulDa.global.apiReponse.code;
+package com.CUK.geulDa.global.apiResponse.code;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +18,11 @@ public enum ErrorCode {
     FORBIDDEN(HttpStatus.FORBIDDEN, "E101", "접근 권한이 없습니다."),
     TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "E102", "토큰이 만료되었습니다."),
     INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "E103", "유효하지 않은 토큰입니다."),
+    INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "E104", "유효하지 않은 Refresh Token입니다."),
+    REFRESH_TOKEN_REUSE_DETECTED(HttpStatus.UNAUTHORIZED, "E105", "Refresh Token 재사용이 감지되었습니다. 보안을 위해 로그아웃 처리됩니다."),
+    INVALID_TEMP_TOKEN(HttpStatus.UNAUTHORIZED, "E106", "유효하지 않거나 만료된 임시 토큰입니다."),
+    OAUTH2_AUTHENTICATION_FAILED(HttpStatus.UNAUTHORIZED, "E107", "OAuth2 인증에 실패했습니다."),
+    UNSUPPORTED_OAUTH2_PROVIDER(HttpStatus.BAD_REQUEST, "E108", "지원하지 않는 OAuth2 Provider입니다."),
 
     // 입력값 검증 (E200~E299)
     INVALID_INPUT(HttpStatus.BAD_REQUEST, "E200", "입력값이 올바르지 않습니다."),

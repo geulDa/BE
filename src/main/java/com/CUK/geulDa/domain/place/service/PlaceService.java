@@ -5,8 +5,8 @@ import com.CUK.geulDa.domain.place.dto.PlaceDetailResponse;
 import com.CUK.geulDa.domain.place.repository.PlaceRepository;
 import com.CUK.geulDa.domain.postcard.UserPostCard;
 import com.CUK.geulDa.domain.postcard.repository.UserPostCardRepository;
-import com.CUK.geulDa.global.apiReponse.code.ErrorCode;
-import com.CUK.geulDa.global.apiReponse.exception.BusinessException;
+import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
+import com.CUK.geulDa.global.apiResponse.exception.BusinessException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +22,7 @@ public class PlaceService {
     private final UserPostCardRepository userPostCardRepository;
 
 
-    public PlaceDetailResponse getPlaceDetail(String placeId, String memberId) {
+    public PlaceDetailResponse getPlaceDetail(Long placeId, Long memberId) {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.RESOURCE_NOT_FOUND,
@@ -35,14 +35,14 @@ public class PlaceService {
         if (userPostCard.isPresent()) {
             UserPostCard upc = userPostCard.get();
             return PlaceDetailResponse.completed(
-                    placeId,
+                    place.getId(),
                     upc.getPostcard().getImageUrl(),
                     place.getName(),
                     place.getDescription(),
                     place.getAddress()
             );
         } else {
-            return PlaceDetailResponse.incomplete(placeId);
+            return PlaceDetailResponse.incomplete(place.getId());
         }
     }
 }

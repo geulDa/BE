@@ -1,11 +1,13 @@
 package com.CUK.geulDa.domain.stamp.controller;
 
+import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.stamp.dto.StampAcquireRequest;
 import com.CUK.geulDa.domain.stamp.dto.StampAcquireResponse;
 import com.CUK.geulDa.domain.stamp.dto.StampCollectionResponse;
 import com.CUK.geulDa.domain.stamp.service.StampService;
-import com.CUK.geulDa.global.apiReponse.code.SuccessCode;
-import com.CUK.geulDa.global.apiReponse.response.ApiResponse;
+import com.CUK.geulDa.global.apiResponse.code.SuccessCode;
+import com.CUK.geulDa.global.apiResponse.response.ApiResponse;
+import com.CUK.geulDa.global.auth.annotation.CurrentMember;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -20,22 +22,29 @@ public class StampController {
 
     private final StampService stampService;
 
-    @Operation(summary = "스탬프 수집 현황 조회", description = "사용자가 모은 스탬프 개수와 리스트를 조회합니다.")
+    @Operation(
+        summary = "스탬프 수집 현황 조회",
+        description = "현재 로그인한 사용자가 모은 스탬프 개수와 리스트를 조회합니다. (JWT 토큰 필요)"
+    )
     @GetMapping("/collection")
     public ResponseEntity<ApiResponse<StampCollectionResponse>> getStampCollection(
-            @RequestParam String memberId) {
-        StampCollectionResponse response = stampService.getStampCollection(memberId);
+            @CurrentMember Member member) {
+        StampCollectionResponse response = stampService.getStampCollection(member);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, response));
     }
 
-    @Operation(summary = "스탬프 획득", description = "명소 15m 반경 내에서 스탬프를 획득하고 엽서를 발급받습니다.")
+    @Operation(
+        summary = "스탬프 획득",
+        description = "현재 로그인한 사용자가 명소 15m 반경 내에서 스탬프를 획득하고 엽서를 발급받습니다. (JWT 토큰 필요)"
+    )
     @PostMapping("/{placeId}/acquire")
     public ResponseEntity<ApiResponse<StampAcquireResponse>> acquireStamp(
-            @PathVariable String placeId,
+            @PathVariable Long placeId,
+            @CurrentMember Member member,
             @RequestBody StampAcquireRequest request) {
         StampAcquireResponse response = stampService.acquireStamp(
                 placeId,
-                request.memberId(),
+                member,
                 request.latitude(),
                 request.longitude()
         );

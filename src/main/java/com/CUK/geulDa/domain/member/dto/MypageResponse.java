@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 public record MypageResponse(
-        String memberId,
+        Long memberId,
         String name,
         String profileImageUrl,
         List<BookmarkedEventDto> bookmarkedEvents,

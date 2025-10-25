@@ -6,7 +6,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record EventDetailResponse(
-        String eventId,
+        Long eventId,
         String title,
         String body,
         String imageUrl,

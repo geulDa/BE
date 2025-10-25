@@ -3,17 +3,22 @@ package com.CUK.geulDa.domain.place;
 import com.CUK.geulDa.domain.postcard.PostCard;
 import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
 @Getter
-public class Place extends BaseEntity{
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class Place extends BaseEntity {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @Column(nullable = false)
     private String name;
@@ -42,21 +47,22 @@ public class Place extends BaseEntity{
     @Column(columnDefinition = "TEXT")
     private String systemMessage;
 
-    protected Place() {}
+    // 연관관계
+    @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PostCard> postcards = new ArrayList<>();
 
-    public Place(String id, String name, String description, String address,
-                 Double latitude, Double longitude, Boolean isHidden, String video, String placeImg) {
-        this.id = id;
+    @Builder
+    public Place(String name, String description, String address,
+                 Double latitude, Double longitude, Boolean isHidden,
+                 String video, String placeImg, String systemMessage) {
         this.name = name;
         this.description = description;
         this.address = address;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.isHidden = isHidden;
         this.video = video;
         this.placeImg = placeImg;
+        this.systemMessage = systemMessage;
     }
-
-    // 연관관계
-    @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PostCard> postcards = new ArrayList<>();
 }

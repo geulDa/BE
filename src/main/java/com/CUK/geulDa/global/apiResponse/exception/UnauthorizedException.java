@@ -1,7 +1,6 @@
-package com.CUK.geulDa.global.apiReponse.exception;
+package com.CUK.geulDa.global.apiResponse.exception;
 
-import com.CUK.geulDa.global.apiReponse.code.ErrorCode;
-import com.CUK.geulDa.global.apiReponse.exception.BusinessException;
+import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
 
 public class UnauthorizedException extends BusinessException {
 

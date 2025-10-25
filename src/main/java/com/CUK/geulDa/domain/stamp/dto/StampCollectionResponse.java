@@ -5,9 +5,9 @@ import java.util.List;
 public record StampCollectionResponse(
         long totalStampCount,
         long collectedStampCount,
-        List<String> stampIds
+        List<Long> stampIds
 ) {
-    public static StampCollectionResponse of(long totalStampCount, long collectedStampCount, List<String> stampIds) {
+    public static StampCollectionResponse of(long totalStampCount, long collectedStampCount, List<Long> stampIds) {
         return new StampCollectionResponse(totalStampCount, collectedStampCount, stampIds);
     }
 }
