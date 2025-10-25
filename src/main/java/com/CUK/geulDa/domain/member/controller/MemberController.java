@@ -1,5 +1,6 @@
 package com.CUK.geulDa.domain.member.controller;
 
+import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.member.dto.MemberResponse;
 import com.CUK.geulDa.domain.member.dto.MypageResponse;
 import com.CUK.geulDa.domain.member.service.MemberService;
@@ -27,9 +28,9 @@ public class MemberController {
         description = "현재 로그인한 사용자의 기본 정보를 조회합니다."
     )
     @GetMapping("/me")
-    public ResponseEntity<ApiResponse<MemberResponse>> getMe(@CurrentMember Long memberId) {
-        MemberResponse member = MemberResponse.from(memberService.getMemberById(memberId));
-        return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, member));
+    public ResponseEntity<ApiResponse<MemberResponse>> getMe(@CurrentMember Member member) {
+        MemberResponse response = MemberResponse.from(member);
+        return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, response));
     }
 
     @Operation(
@@ -37,8 +38,8 @@ public class MemberController {
         description = "현재 로그인한 사용자의 프로필, 북마크한 행사, 획득한 엽서를 조회합니다."
     )
     @GetMapping("/mypage")
-    public ResponseEntity<ApiResponse<MypageResponse>> getMypage(@CurrentMember Long memberId) {
-        MypageResponse mypage = memberService.getMypage(memberId);
+    public ResponseEntity<ApiResponse<MypageResponse>> getMypage(@CurrentMember Member member) {
+        MypageResponse mypage = memberService.getMypage(member);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, mypage));
     }
 }

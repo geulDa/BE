@@ -35,26 +35,20 @@ public class StampService {
     private static final double ACQUISITION_RADIUS_METERS = 15.0;
 
 
-    public StampCollectionResponse getStampCollection(Long memberId) {
+    public StampCollectionResponse getStampCollection(Member member) {
         long totalStampCount = placeRepository.count();
-        long collectedStampCount = stampRepository.countCompletedStampsByMemberId(memberId);
-        List<Long> stampIds = stampRepository.findCompletedStampIdsByMemberId(memberId);
+        long collectedStampCount = stampRepository.countCompletedStampsByMemberId(member.getId());
+        List<Long> stampIds = stampRepository.findCompletedStampIdsByMemberId(member.getId());
 
         return StampCollectionResponse.of(totalStampCount, collectedStampCount, stampIds);
     }
 
     @Transactional
-    public StampAcquireResponse acquireStamp(Long placeId, Long memberId, Double userLatitude, Double userLongitude) {
+    public StampAcquireResponse acquireStamp(Long placeId, Member member, Double userLatitude, Double userLongitude) {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.RESOURCE_NOT_FOUND,
                         "ID가 " + placeId + "인 명소를 찾을 수 없습니다."
-                ));
-
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new BusinessException(
-                        ErrorCode.RESOURCE_NOT_FOUND,
-                        "ID가 " + memberId + "인 회원을 찾을 수 없습니다."
                 ));
 
         boolean isWithinRadius = GpsUtils.isWithinRadius(
@@ -70,7 +64,7 @@ public class StampService {
             );
         }
 
-        Stamp stamp = stampRepository.findByMemberIdAndPlaceId(memberId, placeId)
+        Stamp stamp = stampRepository.findByMemberIdAndPlaceId(member.getId(), placeId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.RESOURCE_NOT_FOUND,
                         "스탬프를 찾을 수 없습니다."

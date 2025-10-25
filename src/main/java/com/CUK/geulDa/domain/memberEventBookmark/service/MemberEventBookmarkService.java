@@ -28,14 +28,11 @@ public class MemberEventBookmarkService {
 	/**
 	 * 북마크 추가
 	 */
-	public ApiResponse<Void> addBookmark(Long memberId, Long eventId) {
-		Member member = memberRepository.findById(memberId)
-			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 회원을 찾을 수 없습니다."));
-
+	public ApiResponse<Void> addBookmark(Member member, Long eventId) {
 		Event event = eventRepository.findById(eventId)
 			.orElseThrow(() -> new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "해당 행사를 찾을 수 없습니다."));
 
-		boolean exists = bookmarkRepository.existsByMemberIdAndEventId(memberId, eventId);
+		boolean exists = bookmarkRepository.existsByMemberIdAndEventId(member.getId(), eventId);
 		if (exists) {
 			throw new BusinessException(ErrorCode.DUPLICATE_RESOURCE, "이미 북마크한 행사입니다.");
 		}
@@ -52,13 +49,13 @@ public class MemberEventBookmarkService {
 	/**
 	 * 북마크 삭제
 	 */
-	public ApiResponse<Void> removeBookmark(Long memberId, Long eventId) {
-		boolean exists = bookmarkRepository.existsByMemberIdAndEventId(memberId, eventId);
+	public ApiResponse<Void> removeBookmark(Member member, Long eventId) {
+		boolean exists = bookmarkRepository.existsByMemberIdAndEventId(member.getId(), eventId);
 		if (!exists) {
 			throw new BusinessException(ErrorCode.RESOURCE_NOT_FOUND, "북마크되지 않은 행사입니다.");
 		}
 
-		bookmarkRepository.deleteByMemberIdAndEventId(memberId, eventId);
+		bookmarkRepository.deleteByMemberIdAndEventId(member.getId(), eventId);
 		return ApiResponse.success(SuccessCode.SUCCESS_DELETE, null);
 	}
 
