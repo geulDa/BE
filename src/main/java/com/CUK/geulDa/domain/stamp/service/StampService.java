@@ -109,6 +109,7 @@ public class StampService {
         return new StampAcquireResponse(
                 stamp.getId(),
                 place.getVideo(),
+                place.getSystemMessage(),
                 new StampAcquireResponse.PostcardInfo(
                         postCard.getImageUrl(),
                         place.getName(),
