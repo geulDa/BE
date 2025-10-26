@@ -3,7 +3,7 @@ package com.CUK.geulDa.domain.postcard.dto;
 import com.CUK.geulDa.domain.postcard.PostCard;
 
 public record PostCardDetailResponse(
-        String postcardId,
+        Long postcardId,
         String imageUrl,
         String placeName,
         String placeDescription

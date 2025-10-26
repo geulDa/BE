@@ -4,14 +4,19 @@ import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.place.Place;
 import com.CUK.geulDa.global.common.BaseEntity;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
+import lombok.Builder;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 @Entity
 @Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Stamp extends BaseEntity {
 
     @Id
-    private String id;
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "member_id", nullable = false)
@@ -23,12 +28,11 @@ public class Stamp extends BaseEntity {
 
     private Boolean isCompleted = false;
 
-    protected Stamp() {}
-
-    public Stamp(String id, Member member, Place place) {
-        this.id = id;
+    @Builder
+    public Stamp(Member member, Place place) {
         this.member = member;
         this.place = place;
+        this.isCompleted = false;
     }
 
     public void visited() {

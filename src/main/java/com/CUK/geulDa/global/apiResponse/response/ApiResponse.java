@@ -1,6 +1,6 @@
-package com.CUK.geulDa.global.apiReponse.response;
+package com.CUK.geulDa.global.apiResponse.response;
 
-import com.CUK.geulDa.global.apiReponse.code.SuccessCode;
+import com.CUK.geulDa.global.apiResponse.code.SuccessCode;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.AccessLevel;
 import lombok.Builder;

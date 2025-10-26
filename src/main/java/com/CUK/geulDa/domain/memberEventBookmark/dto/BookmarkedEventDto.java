@@ -3,7 +3,7 @@ package com.CUK.geulDa.domain.memberEventBookmark.dto;
 import com.CUK.geulDa.domain.event.Event;
 
 public record BookmarkedEventDto(
-        String eventId,
+        Long eventId,
         String title,
         String body
 ) {

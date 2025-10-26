@@ -1,7 +1,7 @@
-package com.CUK.geulDa.global.apiReponse.handler;
+package com.CUK.geulDa.global.apiResponse.handler;
 
-import com.CUK.geulDa.global.apiReponse.code.ErrorCode;
-import com.CUK.geulDa.global.apiReponse.exception.BusinessException;
+import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
+import com.CUK.geulDa.global.apiResponse.exception.BusinessException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
