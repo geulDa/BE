@@ -16,4 +16,7 @@ public interface PostCardRepository extends JpaRepository<PostCard, Long> {
 
     @Query("SELECT pc FROM PostCard pc WHERE pc.place.id = :placeId AND pc.isHidden = false")
     Optional<PostCard> findByPlaceId(@Param("placeId") Long placeId);
+
+    @Query("SELECT pc FROM PostCard pc WHERE pc.place.id = :placeId AND pc.isHidden = :isHidden")
+    Optional<PostCard> findByPlaceIdAndIsHidden(@Param("placeId") Long placeId, @Param("isHidden") Boolean isHidden);
 }
