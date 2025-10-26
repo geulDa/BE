@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.memberEventBookmark.service.MemberEventBookmarkService;
 import com.CUK.geulDa.global.apiResponse.response.ApiResponse;
 import com.CUK.geulDa.global.auth.annotation.CurrentMember;
@@ -30,9 +31,9 @@ public class MemberEventBookmarkController {
 	@PostMapping
 	public ResponseEntity<ApiResponse<Void>> addBookmark(
 		@PathVariable Long eventId,
-		@CurrentMember Long memberId
+		@CurrentMember Member member
 	) {
-		return ResponseEntity.ok(bookmarkService.addBookmark(memberId, eventId));
+		return ResponseEntity.ok(bookmarkService.addBookmark(member, eventId));
 	}
 
 	@Operation(
@@ -42,9 +43,9 @@ public class MemberEventBookmarkController {
 	@DeleteMapping
 	public ResponseEntity<ApiResponse<Void>> removeBookmark(
 		@PathVariable Long eventId,
-		@CurrentMember Long memberId
+		@CurrentMember Member member
 	) {
-		return ResponseEntity.ok(bookmarkService.removeBookmark(memberId, eventId));
+		return ResponseEntity.ok(bookmarkService.removeBookmark(member, eventId));
 	}
 
 }

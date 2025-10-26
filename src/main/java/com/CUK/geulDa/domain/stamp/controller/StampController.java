@@ -1,5 +1,6 @@
 package com.CUK.geulDa.domain.stamp.controller;
 
+import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.stamp.dto.StampAcquireRequest;
 import com.CUK.geulDa.domain.stamp.dto.StampAcquireResponse;
 import com.CUK.geulDa.domain.stamp.dto.StampCollectionResponse;
@@ -27,8 +28,8 @@ public class StampController {
     )
     @GetMapping("/collection")
     public ResponseEntity<ApiResponse<StampCollectionResponse>> getStampCollection(
-            @CurrentMember Long memberId) {
-        StampCollectionResponse response = stampService.getStampCollection(memberId);
+            @CurrentMember Member member) {
+        StampCollectionResponse response = stampService.getStampCollection(member);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, response));
     }
 
@@ -39,11 +40,11 @@ public class StampController {
     @PostMapping("/{placeId}/acquire")
     public ResponseEntity<ApiResponse<StampAcquireResponse>> acquireStamp(
             @PathVariable Long placeId,
-            @CurrentMember Long memberId,
+            @CurrentMember Member member,
             @RequestBody StampAcquireRequest request) {
         StampAcquireResponse response = stampService.acquireStamp(
                 placeId,
-                memberId,
+                member,
                 request.latitude(),
                 request.longitude()
         );
