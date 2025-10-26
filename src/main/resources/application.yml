@@ -1,6 +1,8 @@
 spring:
   application:
     name: GeulDa
+  profiles:
+    active: local
 
   datasource:
     url: ${DB_URL}
