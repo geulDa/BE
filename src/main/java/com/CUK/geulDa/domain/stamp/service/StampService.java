@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Random;
 
 @Service
 @RequiredArgsConstructor
@@ -33,6 +34,8 @@ public class StampService {
     private final UserPostCardRepository userPostCardRepository;
 
     private static final double ACQUISITION_RADIUS_METERS = 15.0;
+    private static final double HIDDEN_POSTCARD_PROBABILITY = 0.1; // 10% 확률
+    private final Random random = new Random();
 
 
     public StampCollectionResponse getStampCollection(Member member) {
@@ -80,10 +83,13 @@ public class StampService {
         stamp.visited();
         stampRepository.save(stamp);
 
-        PostCard postCard = postCardRepository.findByPlaceId(placeId)
+        // 10% 확률로 히든 엽서 발급
+        boolean isHidden = random.nextDouble() < HIDDEN_POSTCARD_PROBABILITY;
+
+        PostCard postCard = postCardRepository.findByPlaceIdAndIsHidden(placeId, isHidden)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.RESOURCE_NOT_FOUND,
-                        "해당 명소의 엽서를 찾을 수 없습니다."
+                        "해당 명소의 " + (isHidden ? "히든 " : "") + "엽서를 찾을 수 없습니다."
                 ));
 
         UserPostCard userPostCard = UserPostCard.builder()
