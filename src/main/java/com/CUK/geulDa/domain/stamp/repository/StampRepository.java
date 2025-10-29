@@ -18,4 +18,7 @@ public interface StampRepository extends JpaRepository<Stamp, Long> {
 
     @Query("SELECT s FROM Stamp s WHERE s.member.id = :memberId AND s.place.id = :placeId")
     Optional<Stamp> findByMemberIdAndPlaceId(@Param("memberId") Long memberId, @Param("placeId") Long placeId);
+
+    @Query("SELECT s.place.id FROM Stamp s WHERE s.member.id = :memberId AND s.isCompleted = true")
+    List<Long> findCompletedPlaceIdsByMemberId(@Param("memberId") Long memberId);
 }
