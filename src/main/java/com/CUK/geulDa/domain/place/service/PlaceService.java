@@ -58,10 +58,15 @@ public class PlaceService {
                 .sorted((p1, p2) -> Long.compare(p1.getId(), p2.getId()))
                 .toList();
 
-		Long memberId = member.getId();
-
-        List<Long> completedPlaceIds = stampRepository.findCompletedPlaceIdsByMemberId(memberId);
-        Set<Long> completedPlaceIdSet = Set.copyOf(completedPlaceIds);
+        // 비로그인 사용자: 스탬프 정보 없이 반환
+        Set<Long> completedPlaceIdSet;
+        if (member == null) {
+            completedPlaceIdSet = Set.of();
+        } else {
+            Long memberId = member.getId();
+            List<Long> completedPlaceIds = stampRepository.findCompletedPlaceIdsByMemberId(memberId);
+            completedPlaceIdSet = Set.copyOf(completedPlaceIds);
+        }
 
         List<PlaceListResponse.PlaceItem> placeItems = places.stream()
                 .map(place -> PlaceListResponse.PlaceItem.of(

@@ -21,10 +21,10 @@ public class PlaceController {
 
     private final PlaceService placeService;
 
-    @Operation(summary = "(메인화면 지도) 명소 리스트 조회", description = "모든 명소 리스트를 조회합니다. 각 명소마다 스탬프 소유 여부를 포함합니다.")
+    @Operation(summary = "(메인화면 지도) 명소 리스트 조회", description = "모든 명소 리스트를 조회합니다. 로그인한 경우 각 명소마다 스탬프 소유 여부를 포함합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<PlaceListResponse>> getPlaceList(
-            @CurrentMember Member member) {
+            @CurrentMember(required = false) Member member) {
         PlaceListResponse response = placeService.getPlaceList(member);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, response));
     }
