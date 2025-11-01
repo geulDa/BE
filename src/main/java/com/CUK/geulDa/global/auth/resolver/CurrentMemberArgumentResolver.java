@@ -41,14 +41,26 @@ public class CurrentMemberArgumentResolver implements HandlerMethodArgumentResol
                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
+        // @CurrentMember 어노테이션의 required 속성 확인
+        CurrentMember currentMember = parameter.getParameterAnnotation(CurrentMember.class);
+        boolean required = currentMember != null && currentMember.required();
+
         // 인증 정보가 없는 경우
         if (authentication == null || !authentication.isAuthenticated()) {
+            if (!required) {
+                log.debug("인증되지 않은 요청에서 @CurrentMember(required=false) 사용 - null 반환");
+                return null;
+            }
             log.warn("인증되지 않은 요청에서 @CurrentMember 사용 시도");
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "로그인이 필요합니다.");
         }
 
         // Principal이 Long 타입이 아닌 경우 (익명 사용자 등)
         if (!(authentication.getPrincipal() instanceof Long)) {
+            if (!required) {
+                log.debug("잘못된 Principal 타입이지만 required=false - null 반환");
+                return null;
+            }
             log.warn("잘못된 Principal 타입: {}", authentication.getPrincipal().getClass());
             throw new BusinessException(ErrorCode.UNAUTHORIZED, "올바르지 않은 인증 정보입니다.");
         }

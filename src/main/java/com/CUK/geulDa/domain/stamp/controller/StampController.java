@@ -24,11 +24,11 @@ public class StampController {
 
     @Operation(
         summary = "스탬프 수집 현황 조회",
-        description = "현재 로그인한 사용자가 모은 스탬프 개수와 리스트를 조회합니다. (JWT 토큰 필요)"
+        description = "스탬프 수집 현황을 조회합니다. 로그인하지 않은 경우 빈 템플릿(10개 빈 공간)을 반환하고, 로그인한 경우 사용자가 모은 스탬프 정보를 반환합니다."
     )
     @GetMapping("/collection")
     public ResponseEntity<ApiResponse<StampCollectionResponse>> getStampCollection(
-            @CurrentMember Member member) {
+            @CurrentMember(required = false) Member member) {
         StampCollectionResponse response = stampService.getStampCollection(member);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, response));
     }

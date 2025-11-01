@@ -40,6 +40,13 @@ public class StampService {
 
     public StampCollectionResponse getStampCollection(Member member) {
         long totalStampCount = placeRepository.count();
+
+        // 비로그인 사용자: 빈 템플릿 반환
+        if (member == null) {
+            return StampCollectionResponse.of(totalStampCount, 0, List.of());
+        }
+
+        // 로그인 사용자: 실제 스탬프 정보 반환
         long collectedStampCount = stampRepository.countCompletedStampsByMemberId(member.getId());
         List<Long> stampIds = stampRepository.findCompletedStampIdsByMemberId(member.getId());
 
