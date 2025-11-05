@@ -4,6 +4,7 @@ import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.member.repository.MemberRepository;
 import com.CUK.geulDa.domain.place.Place;
 import com.CUK.geulDa.domain.place.repository.PlaceRepository;
+import com.CUK.geulDa.domain.place.service.PlaceService;
 import com.CUK.geulDa.domain.postcard.PostCard;
 import com.CUK.geulDa.domain.postcard.UserPostCard;
 import com.CUK.geulDa.domain.postcard.repository.PostCardRepository;
@@ -37,8 +38,7 @@ public class StampService {
     private static final double HIDDEN_POSTCARD_PROBABILITY = 0.1; // 10% 확률
     private final Random random = new Random();
 
-
-    public StampCollectionResponse getStampCollection(Member member) {
+	public StampCollectionResponse getStampCollection(Member member) {
         long totalStampCount = placeRepository.count();
 
         // 비로그인 사용자: 빈 템플릿 반환
@@ -108,13 +108,15 @@ public class StampService {
 
         return new StampAcquireResponse(
                 stamp.getId(),
+                member.getId(),
                 place.getVideo(),
                 place.getSystemMessage(),
                 new StampAcquireResponse.PostcardInfo(
                         postCard.getImageUrl(),
                         place.getName(),
                         place.getDescription(),
-                        place.getAddress()
+                        place.getAddress(),
+                        isHidden
                 )
         );
     }
