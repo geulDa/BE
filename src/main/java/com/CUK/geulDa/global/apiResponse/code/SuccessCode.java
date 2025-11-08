@@ -38,7 +38,13 @@ public enum SuccessCode {
     SUCCESS_UPLOAD(HttpStatus.OK, "S500", "파일 업로드에 성공했습니다."),
     SUCCESS_DOWNLOAD(HttpStatus.OK, "S501", "파일 다운로드에 성공했습니다."),
     SUCCESS_SEND_EMAIL(HttpStatus.OK, "S502", "이메일 전송에 성공했습니다."),
-    SUCCESS_SEND_SMS(HttpStatus.OK, "S503", "SMS 전송에 성공했습니다.");
+    SUCCESS_SEND_SMS(HttpStatus.OK, "S503", "SMS 전송에 성공했습니다."),
+
+    // AI 기능 (S600~S699)
+    SUCCESS_AI_COURSE_RECOMMEND(HttpStatus.OK, "S600", "AI 코스 추천에 성공했습니다."),
+    SUCCESS_AI_SESSION_RETRIEVE(HttpStatus.OK, "S601", "세션 조회에 성공했습니다."),
+    SUCCESS_AI_CHATBOT_SESSION_CREATE(HttpStatus.CREATED, "S602", "채팅 세션 생성에 성공했습니다."),
+    SUCCESS_AI_CHATBOT_CHAT(HttpStatus.OK, "S603", "챗봇 대화에 성공했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
