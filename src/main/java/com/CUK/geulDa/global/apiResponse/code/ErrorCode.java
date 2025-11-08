@@ -37,7 +37,15 @@ public enum ErrorCode {
     // 서버 오류 (E500~E599)
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "E500", "서버 내부 오류가 발생했습니다."),
     DATABASE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "E501", "데이터베이스 처리 중 오류가 발생했습니다."),
-    EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "E502", "외부 API 호출에 실패했습니다.");
+    EXTERNAL_API_ERROR(HttpStatus.BAD_GATEWAY, "E502", "외부 API 호출에 실패했습니다."),
+
+    // AI 기능 오류 (E600~E699)
+    AI_SERVICE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "E600", "AI 서비스 처리 중 오류가 발생했습니다."),
+    AI_MODEL_ERROR(HttpStatus.BAD_GATEWAY, "E601", "AI 모델 호출에 실패했습니다."),
+    AI_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "E602", "세션을 찾을 수 없습니다."),
+    AI_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "E603", "AI 요청 형식이 올바르지 않습니다."),
+    AI_NO_PLACES_FOUND(HttpStatus.NOT_FOUND, "E604", "검색된 장소가 없습니다."),
+    VECTOR_STORE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "E605", "벡터 스토어 처리 중 오류가 발생했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
