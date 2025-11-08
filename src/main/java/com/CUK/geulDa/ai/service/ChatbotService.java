@@ -1,0 +1,373 @@
+package com.CUK.geulDa.ai.service;
+
+import com.CUK.geulDa.ai.dto.ChatRequest;
+import com.CUK.geulDa.ai.dto.ChatResponse;
+import com.CUK.geulDa.ai.mcp.BucheonTourMcpServer;
+import com.CUK.geulDa.domain.place.Place;
+import com.CUK.geulDa.domain.place.service.PlaceService;
+import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
+import com.CUK.geulDa.global.apiResponse.exception.BusinessException;
+import jakarta.annotation.PostConstruct;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.ai.chat.client.ChatClient;
+import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SimpleVectorStore;
+import org.springframework.ai.vectorstore.VectorStore;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.io.File;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.*;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ChatbotService {
+
+    private final ChatClient chatClient;
+    private final BucheonTourMcpServer mcpServer;
+    private final VectorStore vectorStore;
+    private final PlaceService placeService;
+    private final RedisTemplate<String, Object> redisTemplate;
+
+    @Value("${geulda.vector-store.path:vector-store.json}")
+    private String vectorStorePath;
+
+    @PostConstruct
+    public void initializeVectorStore() {
+        File vectorFile = new File(vectorStorePath);
+
+        // 파일이 이미 있으면 초기화 생략 (AiConfiguration에서 로드됨)
+        if (vectorFile.exists()) {
+            log.info("⏩ 벡터 스토어 파일 존재, 초기화 생략: {} ({}KB)",
+                    vectorStorePath, vectorFile.length() / 1024);
+            return;
+        }
+
+        // 최초 1회만 벡터 생성 + 저장
+        try {
+            log.info("🔄 벡터 스토어 최초 생성 시작... (시간이 걸릴 수 있습니다)");
+            long startTime = System.currentTimeMillis();
+
+            List<Place> places = placeService.getAllVisiblePlaces();
+
+            List<Document> documents = places.stream()
+                    .filter(place -> StringUtils.hasText(place.getDescription()))
+                    .map(place -> new Document(
+                            place.getId().toString(),
+                            buildDocumentContent(place),
+                            buildDocumentMetadata(place)
+                    ))
+                    .toList();
+
+            if (!documents.isEmpty()) {
+                vectorStore.add(documents);
+
+                // 파일로 저장
+                if (vectorStore instanceof SimpleVectorStore simpleStore) {
+                    simpleStore.save(vectorFile);
+                    long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+                    log.info("💾 벡터 데이터 저장 완료: {} 장소 → {} ({}초 소요, {}KB)",
+                            documents.size(),
+                            vectorStorePath,
+                            elapsed,
+                            vectorFile.length() / 1024);
+                }
+            } else {
+                log.warn("⚠️ 벡터 스토어에 추가할 장소가 없습니다");
+            }
+
+        } catch (Exception e) {
+            log.error("❌ 벡터 스토어 초기화 실패", e);
+        }
+    }
+
+    /**
+     * 장소 데이터 변경 시 벡터 스토어 재생성 (관리자 API에서 호출)
+     */
+    public void refreshVectorStore() {
+        try {
+            log.info("🔄 벡터 스토어 재생성 시작...");
+            long startTime = System.currentTimeMillis();
+
+            File vectorFile = new File(vectorStorePath);
+
+            // 기존 파일 삭제
+            if (vectorFile.exists()) {
+                boolean deleted = vectorFile.delete();
+                log.info("기존 벡터 파일 삭제: {}", deleted);
+            }
+
+            // 벡터 스토어 재생성
+            List<Place> places = placeService.getAllVisiblePlaces();
+            List<Document> documents = places.stream()
+                    .filter(place -> StringUtils.hasText(place.getDescription()))
+                    .map(place -> new Document(
+                            place.getId().toString(),
+                            buildDocumentContent(place),
+                            buildDocumentMetadata(place)
+                    ))
+                    .toList();
+
+            if (!documents.isEmpty()) {
+                // 기존 데이터 클리어 후 재추가
+                vectorStore.add(documents);
+
+                // 파일로 저장
+                if (vectorStore instanceof SimpleVectorStore simpleStore) {
+                    simpleStore.save(vectorFile);
+                    long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+                    log.info("✅ 벡터 스토어 재생성 완료: {} 장소 ({}초 소요)",
+                            documents.size(), elapsed);
+                }
+            }
+        } catch (Exception e) {
+            log.error("❌ 벡터 스토어 재생성 실패", e);
+            throw new BusinessException(ErrorCode.AI_SERVICE_ERROR,
+                    "벡터 스토어 재생성 중 오류가 발생했습니다.");
+        }
+    }
+
+    private String buildDocumentContent(Place place) {
+        StringBuilder content = new StringBuilder();
+        content.append(place.getName()).append(" ");
+
+        if (StringUtils.hasText(place.getDescription())) {
+            content.append(place.getDescription()).append(" ");
+        }
+
+        if (StringUtils.hasText(place.getCategory())) {
+            content.append(place.getCategory()).append(" ");
+        }
+
+        return content.toString().trim();
+    }
+
+    private Map<String, Object> buildDocumentMetadata(Place place) {
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("name", place.getName());
+        metadata.put("category", place.getCategory() != null ? place.getCategory() : "");
+        metadata.put("address", place.getAddress() != null ? place.getAddress() : "");
+
+        return metadata;
+    }
+
+    public String createSession() {
+        String sessionId = UUID.randomUUID().toString();
+
+        String key = "chat:session:" + sessionId;
+        redisTemplate.opsForValue().set(
+                key,
+                Map.of("createdAt", LocalDateTime.now().toString()),
+                Duration.ofHours(1)
+        );
+
+        log.info("채팅 세션 생성: {}", sessionId);
+        return sessionId;
+    }
+
+    public ChatResponse chat(String sessionId, String message) {
+        // 세션 검증
+        validateSession(sessionId);
+
+        try {
+            // 자연어 검색이 필요한지 판단
+            boolean needsSemanticSearch = isSemanticQuery(message);
+
+            // 컨텍스트 구성 (RAG)
+            String context = needsSemanticSearch ?
+                    buildSemanticContext(message) :
+                    buildKeywordContext(message);
+            String prompt = String.format("""
+                당신은 부천시 관광 전문 AI 가이드 '글다'입니다.
+                20년 경력의 부천 여행 전문가처럼 상세하고 실용적인 정보를 제공하세요.
+
+                [부천 장소 정보]
+                %s
+
+                [사용자 질문]
+                %s
+
+                [답변 가이드라인]
+                1. 인사 & 맥락 파악
+                   - 사용자의 질문 의도를 정확히 파악
+                   - 간단하고 친근한 인사로 시작 (1문장)
+
+                2. 장소 추천 (최대 3개)
+                   각 장소마다 다음 형식으로 작성:
+                   📍 **장소명**
+                   • 특징: 이 장소만의 독특한 매력 (1문장)
+                   • 추천 이유: 사용자 질문과 연결된 구체적 이유 (1문장)
+                   • 방문 팁: 최적 시간대, 주변 볼거리, 주의사항 등 (1-2문장)
+                   • 위치: 주소 또는 접근성 정보
+
+                3. 추가 정보 (선택)
+                   - 장소 간 이동 시간/거리
+                   - 계절별 추천 시기
+                   - 함께 방문하면 좋은 주변 장소
+                   - 맛집/카페 조합 추천
+
+                4. 마무리
+                   - 따뜻한 격려나 추가 도움 제안 (1문장)
+
+                [필수 준수 사항]
+                - 위 참고 정보에 있는 장소만 추천
+                - 구체적인 숫자, 시간, 거리 포함
+                - 이모지로 가독성 향상 (📍🎨🍽️☕🌳🎭⏰🚗 등)
+                - 계절, 날씨, 시간대 고려한 맞춤 추천
+                - 실제 방문자처럼 생생한 정보 제공
+                - 참고 정보에 없는 장소 언급 금지
+                - 모호한 표현 지양 ("좋아요", "괜찮아요" 등)
+                - 과장된 홍보 문구 지양
+                - 간결하게 작성
+
+                [응답 예시]
+                안녕하세요! 부천에서 데이트하기 좋은 곳을 찾으시는군요 😊
+
+                📍 **석왕사**
+                • 특징: 조용한 산속 사찰로 단풍과 벚꽃이 아름다운 힐링 명소입니다
+                • 추천 이유: 도심 속 고즈넉한 분위기에서 여유로운 산책 데이트를 즐길 수 있어요
+                • 방문 팁: 평일 오전 방문 시 한적하며, 주변 둘레길(약 1.5km)을 함께 걸으면 좋습니다
+                • 위치: 부천시 원미구 춘의동 (시청에서 차로 10분)
+
+                📍 **부천 아트벙커**
+                • 특징: 지하 벙커를 개조한 복합문화공간, 독특한 건축미가 인상적입니다
+                • 추천 이유: 전시, 영화, 공연을 한 곳에서 즐길 수 있어 문화 데이트에 최적입니다
+                • 방문 팁: 주말 오후 2-5시 방문 추천, 전시 후 1층 카페에서 여유 시간 가지세요
+                • 위치: 부천역 도보 5분 (무료 주차 가능)
+
+                ⏰ 두 곳 모두 2-3시간이면 충분히 둘러볼 수 있어요. 궁금한 점 있으면 언제든 물어보세요! 🌟
+                """, context, message);
+
+            org.springframework.ai.chat.model.ChatResponse response = chatClient
+                    .prompt(prompt)
+                    .call()
+                    .chatResponse();
+
+            String botMessage = response.getResult().getOutput().getText();
+
+            // 채팅 히스토리 저장
+            saveChatHistory(sessionId, message, botMessage);
+
+            return new ChatResponse(botMessage);
+
+        } catch (Exception e) {
+            log.error("챗봇 처리 실패", e);
+            throw new BusinessException(ErrorCode.AI_SERVICE_ERROR,
+                    "챗봇 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.");
+        }
+    }
+
+    private boolean isSemanticQuery(String message) {
+        List<String> semanticKeywords = List.of(
+                "분위기", "느낌", "같은", "비슷한", "추천", "어떤", "좋은",
+                "어디", "뭐", "무엇"
+        );
+        return semanticKeywords.stream().anyMatch(message::contains);
+    }
+
+    private String buildSemanticContext(String query) {
+        @SuppressWarnings("unchecked")
+        Map<String, Object> searchResult = (Map<String, Object>)
+                mcpServer.executeTool("semantic_search", Map.of("query", query));
+
+        if (searchResult.containsKey("error")) {
+            log.warn("시맨틱 검색 실패, 키워드 검색으로 대체");
+            return buildKeywordContext(query);
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Place> places = (List<Place>) searchResult.get("places");
+
+        if (places == null || places.isEmpty()) {
+            return "현재 검색된 장소가 없습니다.";
+        }
+
+        return places.stream()
+                .map(place -> String.format("- %s: %s (%s)",
+                        place.getName(),
+                        place.getDescription() != null ? place.getDescription() : "",
+                        place.getAddress() != null ? place.getAddress() : ""))
+                .collect(Collectors.joining("\n"));
+    }
+
+    private String buildKeywordContext(String query) {
+        // 키워드 추출
+        String keyword = extractKeyword(query);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Object> searchResult = (Map<String, Object>)
+                mcpServer.executeTool("search_places", Map.of("keyword", keyword));
+
+        if (searchResult.containsKey("error")) {
+            return "현재 검색된 장소가 없습니다.";
+        }
+
+        @SuppressWarnings("unchecked")
+        List<Place> places = (List<Place>) searchResult.get("places");
+
+        if (places == null || places.isEmpty()) {
+            return "현재 검색된 장소가 없습니다.";
+        }
+
+        return places.stream()
+                .map(place -> String.format("- %s: %s",
+                        place.getName(),
+                        place.getDescription() != null ? place.getDescription() : ""))
+                .collect(Collectors.joining("\n"));
+    }
+
+    private String extractKeyword(String query) {
+        String[] stopWords = {"은", "는", "이", "가", "을", "를", "에", "의", "로", "으로",
+                "에서", "어디", "뭐", "무엇", "있어", "있나요", "알려줘", "추천"};
+
+        String cleaned = query;
+        for (String stopWord : stopWords) {
+            cleaned = cleaned.replace(stopWord, " ");
+        }
+
+        return cleaned.trim().split("\\s+")[0];
+    }
+
+
+    /**
+     * 세션 유효성 검증
+     */
+    private void validateSession(String sessionId) {
+        if (sessionId == null || sessionId.isBlank()) {
+            throw new BusinessException(ErrorCode.AI_SESSION_NOT_FOUND,
+                    "세션 ID가 제공되지 않았습니다.");
+        }
+
+        String key = "chat:session:" + sessionId;
+        Boolean exists = redisTemplate.hasKey(key);
+
+        if (exists == null || !exists) {
+            log.warn("유효하지 않은 세션 접근 시도: {}", sessionId);
+            throw new BusinessException(ErrorCode.AI_SESSION_NOT_FOUND,
+                    "유효하지 않거나 만료된 세션입니다. 새 세션을 생성해주세요.");
+        }
+
+        log.debug("세션 검증 성공: {}", sessionId);
+    }
+
+    private void saveChatHistory(String sessionId, String userMessage, String botMessage) {
+        String key = "chat:history:" + sessionId;
+
+        Map<String, Object> turn = Map.of(
+                "user", userMessage,
+                "bot", botMessage,
+                "timestamp", LocalDateTime.now().toString()
+        );
+
+        redisTemplate.opsForList().leftPush(key, turn);
+        redisTemplate.opsForList().trim(key, 0, 9); // 최근 10턴만 유지
+        redisTemplate.expire(key, Duration.ofHours(1));
+    }
+}
