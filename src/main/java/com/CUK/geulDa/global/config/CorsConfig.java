@@ -17,7 +17,9 @@ public class CorsConfig {
 
         configuration.setAllowedOrigins(List.of(
                 "http://localhost:3000",
-                "http://localhost:5173"
+                "http://localhost:5173",
+                "https://geulda.vercel.app",
+                "https://api.geulda.kr"
         ));
 
         configuration.setAllowedMethods(List.of(
