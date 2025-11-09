@@ -73,6 +73,21 @@ spring:
           min-idle: 2
           max-wait: -1ms
 
+  ai:
+    google:
+      genai:
+        api-key: ${GEMINI_API_KEY}
+        chat:
+          options:
+            model: gemini-2.0-flash-exp
+            temperature: 0.3
+            max-output-tokens: 2048
+        embedding:
+          api-key: ${GEMINI_API_KEY}
+          text:
+            options:
+              model: text-embedding-004
+
 jwt:
   secret: ${JWT_SECRET}
   access-token-expiration: 1800000
@@ -80,3 +95,13 @@ jwt:
 
 bucket4j:
   enabled: false
+
+geulda:
+  ai:
+    session-ttl-minutes: 30
+    chatbot-ttl-hours: 1
+  vector-store:
+    path: vector-store.json
+  google:
+    places:
+      api-key: ${GOOGLE_PLACES_API_KEY}

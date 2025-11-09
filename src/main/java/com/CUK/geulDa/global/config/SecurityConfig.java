@@ -52,7 +52,8 @@ public class SecurityConfig {
                                 "/v3/api-docs/**",
                                 "/swagger-resources/**",
                                 "/api/stamps/collection",
-                                "/api/places"
+                                "/api/places",
+                                "/api/chatbot/**"
                         ).permitAll()
 
                         .anyRequest().authenticated()
