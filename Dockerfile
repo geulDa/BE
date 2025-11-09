@@ -1,14 +1,32 @@
-# 1. JDK 17 기반
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk AS builder
 
-# 2. 컨테이너 내부 작업 디렉토리
 WORKDIR /app
 
-# 3. jar 복사
-COPY build/libs/geulda-app-0.0.1-SNAPSHOT.jar app.jar
+# Gradle 래퍼와 빌드 설정 파일 복사
+COPY gradlew .
+COPY gradle gradle
+COPY build.gradle .
+COPY settings.gradle .
+COPY test.gradle .
 
-# 4. 컨테이너가 사용할 포트
+# 소스 코드 복사
+COPY src src
+
+# 빌드 실행 (테스트 제외)
+RUN chmod +x ./gradlew && \
+    ./gradlew clean build -x test --no-daemon
+
+FROM eclipse-temurin:17-jre
+
+WORKDIR /app
+
+# 타임존 설정 (한국 시간)
+ENV TZ=Asia/Seoul
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+# 빌드 단계에서 생성된 jar 파일 복사
+COPY --from=builder /app/build/libs/*.jar app.jar
+
 EXPOSE 8080
 
-# 5. 실행 명령
 ENTRYPOINT ["java", "-jar", "app.jar"]

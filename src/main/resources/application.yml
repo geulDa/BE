@@ -105,3 +105,11 @@ geulda:
   google:
     places:
       api-key: ${GOOGLE_PLACES_API_KEY}
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: when-authorized
