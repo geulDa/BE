@@ -33,42 +33,44 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(AbstractHttpConfigurer::disable)
+            .csrf(AbstractHttpConfigurer::disable)
 
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
 
-                .sessionManagement(session -> session
-                        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            .sessionManagement(session -> session
+                .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
+            )
+
+            .authorizeHttpRequests(authorize -> authorize
+                .requestMatchers(
+                    "/api/auth/temp-token/**",
+                    "/oauth2/**",
+                    "/login/oauth2/**",
+                    "/error",
+                    "/actuator/health",
+                    "/swagger-ui/**",
+                    "/v3/api-docs/**",
+                    "/swagger-resources/**",
+                    "/api/stamps/collection",
+                    "/api/places",
+                    "/api/courses",
+                    "/api/courses/recommend",
+                    "/api/chatbot/**"
+                ).permitAll()
+
+                .anyRequest().authenticated()
+            )
+
+            .oauth2Login(oauth2 -> oauth2
+                .userInfoEndpoint(userInfo -> userInfo
+                    .oidcUserService(customOidcUserService)
                 )
+                .successHandler(oAuth2SuccessHandler)
+                .failureHandler(oAuth2FailureHandler)
+            )
 
-                .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers(
-                                "/api/auth/temp-token/**",
-                                "/oauth2/**",
-                                "/login/oauth2/**",
-                                "/error",
-                                "/actuator/health",
-                                "/swagger-ui/**",
-                                "/v3/api-docs/**",
-                                "/swagger-resources/**",
-                                "/api/stamps/collection",
-                                "/api/places",
-                                "/api/chatbot/**"
-                        ).permitAll()
-
-                        .anyRequest().authenticated()
-                )
-
-                .oauth2Login(oauth2 -> oauth2
-                        .userInfoEndpoint(userInfo -> userInfo
-                                .oidcUserService(customOidcUserService)
-                        )
-                        .successHandler(oAuth2SuccessHandler)
-                        .failureHandler(oAuth2FailureHandler)
-                )
-
-                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
-                .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
