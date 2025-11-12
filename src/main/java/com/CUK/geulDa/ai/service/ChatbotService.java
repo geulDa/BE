@@ -16,6 +16,7 @@ import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -23,6 +24,7 @@ import java.io.File;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -39,24 +41,38 @@ public class ChatbotService {
     @Value("${geulda.vector-store.path:vector-store.json}")
     private String vectorStorePath;
 
+    private static final int BATCH_SIZE = 50;
+
+    private volatile boolean isVectorStoreReady = false;
+
     @PostConstruct
     public void initializeVectorStore() {
         File vectorFile = new File(vectorStorePath);
 
-        // 파일이 이미 있으면 초기화 생략 (AiConfiguration에서 로드됨)
+        // 파일이 이미 있으면 즉시 준비 완료
         if (vectorFile.exists()) {
-            log.info("⏩ 벡터 스토어 파일 존재, 초기화 생략: {} ({}KB)",
+            isVectorStoreReady = true;
+            log.info("✅ 벡터 스토어 파일 존재, 즉시 준비 완료: {} ({}KB)",
                     vectorStorePath, vectorFile.length() / 1024);
             return;
         }
 
-        // 최초 1회만 벡터 생성 + 저장
+        // 파일이 없으면 백그라운드에서 생성
+        log.info("🔄 벡터 스토어 파일 없음, 백그라운드 생성 시작...");
+        initializeVectorStoreAsync();
+    }
+
+    /**
+     * 벡터스토어 비동기 초기화 (최초 생성)
+     */
+    @Async("vectorStoreExecutor")
+    public void initializeVectorStoreAsync() {
         try {
-            log.info("🔄 벡터 스토어 최초 생성 시작... (시간이 걸릴 수 있습니다)");
+            log.info("🔄 벡터 스토어 최초 생성 시작... (백그라운드)");
             long startTime = System.currentTimeMillis();
 
+            // 1. 데이터 조회
             List<Place> places = placeService.getAllVisiblePlaces();
-
             List<Document> documents = places.stream()
                     .filter(place -> StringUtils.hasText(place.getDescription()))
                     .map(place -> new Document(
@@ -66,25 +82,40 @@ public class ChatbotService {
                     ))
                     .toList();
 
-            if (!documents.isEmpty()) {
-                vectorStore.add(documents);
-
-                // 파일로 저장
-                if (vectorStore instanceof SimpleVectorStore simpleStore) {
-                    simpleStore.save(vectorFile);
-                    long elapsed = (System.currentTimeMillis() - startTime) / 1000;
-                    log.info("💾 벡터 데이터 저장 완료: {} 장소 → {} ({}초 소요, {}KB)",
-                            documents.size(),
-                            vectorStorePath,
-                            elapsed,
-                            vectorFile.length() / 1024);
-                }
-            } else {
+            if (documents.isEmpty()) {
                 log.warn("⚠️ 벡터 스토어에 추가할 장소가 없습니다");
+                return;
             }
+
+            // 2. 배치로 분할
+            List<List<Document>> batches = partitionList(documents, BATCH_SIZE);
+            log.info("📦 총 {}개 문서를 {}개 배치로 분할 (배치 크기: {})",
+                    documents.size(), batches.size(), BATCH_SIZE);
+
+            // 3. 병렬 처리
+            List<CompletableFuture<Void>> futures = batches.stream()
+                    .map(this::processBatchAsync)
+                    .collect(Collectors.toList());
+
+            // 4. 모든 배치 완료 대기
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .join();
+
+            // 5. 파일로 저장
+            File vectorFile = new File(vectorStorePath);
+            if (vectorStore instanceof SimpleVectorStore simpleStore) {
+                simpleStore.save(vectorFile);
+                long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+                log.info("💾 벡터 데이터 저장 완료: {} ({}초 소요, {}KB)",
+                        vectorStorePath, elapsed, vectorFile.length() / 1024);
+            }
+
+            isVectorStoreReady = true;
+            log.info("✅ 벡터 스토어 초기화 완료! (총 {}개 장소)", documents.size());
 
         } catch (Exception e) {
             log.error("❌ 벡터 스토어 초기화 실패", e);
+            isVectorStoreReady = false;
         }
     }
 
@@ -92,19 +123,28 @@ public class ChatbotService {
      * 장소 데이터 변경 시 벡터 스토어 재생성 (관리자 API에서 호출)
      */
     public void refreshVectorStore() {
+        log.info("🔄 벡터 스토어 재생성 요청 접수 (백그라운드 실행)");
+        isVectorStoreReady = false;  // 재생성 중에는 사용 불가
+        refreshVectorStoreAsync();
+    }
+
+    /**
+     * 벡터스토어 비동기 재생성
+     */
+    @Async("vectorStoreExecutor")
+    public void refreshVectorStoreAsync() {
         try {
-            log.info("🔄 벡터 스토어 재생성 시작...");
+            log.info("🔄 벡터 스토어 재생성 시작... (백그라운드)");
             long startTime = System.currentTimeMillis();
 
+            // 1. 기존 파일 삭제
             File vectorFile = new File(vectorStorePath);
-
-            // 기존 파일 삭제
             if (vectorFile.exists()) {
                 boolean deleted = vectorFile.delete();
-                log.info("기존 벡터 파일 삭제: {}", deleted);
+                log.info("📁 기존 벡터 파일 삭제: {}", deleted);
             }
 
-            // 벡터 스토어 재생성
+            // 2. 데이터 조회 및 Document 변환
             List<Place> places = placeService.getAllVisiblePlaces();
             List<Document> documents = places.stream()
                     .filter(place -> StringUtils.hasText(place.getDescription()))
@@ -115,23 +155,71 @@ public class ChatbotService {
                     ))
                     .toList();
 
-            if (!documents.isEmpty()) {
-                // 기존 데이터 클리어 후 재추가
-                vectorStore.add(documents);
-
-                // 파일로 저장
-                if (vectorStore instanceof SimpleVectorStore simpleStore) {
-                    simpleStore.save(vectorFile);
-                    long elapsed = (System.currentTimeMillis() - startTime) / 1000;
-                    log.info("✅ 벡터 스토어 재생성 완료: {} 장소 ({}초 소요)",
-                            documents.size(), elapsed);
-                }
+            if (documents.isEmpty()) {
+                log.warn("⚠️ 벡터 스토어에 추가할 장소가 없습니다");
+                return;
             }
+
+            // 3. 배치로 분할
+            List<List<Document>> batches = partitionList(documents, BATCH_SIZE);
+            log.info("📦 총 {}개 문서를 {}개 배치로 분할 (배치 크기: {})",
+                    documents.size(), batches.size(), BATCH_SIZE);
+
+            // 4. 병렬 처리
+            List<CompletableFuture<Void>> futures = batches.stream()
+                    .map(this::processBatchAsync)
+                    .collect(Collectors.toList());
+
+            // 5. 모든 배치 완료 대기
+            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
+                    .join();
+
+            // 6. 파일로 저장
+            if (vectorStore instanceof SimpleVectorStore simpleStore) {
+                simpleStore.save(vectorFile);
+                long elapsed = (System.currentTimeMillis() - startTime) / 1000;
+                log.info("💾 벡터 데이터 저장 완료: {} ({}초 소요, {}KB)",
+                        vectorStorePath, elapsed, vectorFile.length() / 1024);
+            }
+
+            isVectorStoreReady = true;
+            log.info("✅ 벡터 스토어 재생성 완료! (총 {}개 장소, {}초 소요)",
+                    documents.size(), (System.currentTimeMillis() - startTime) / 1000);
+
         } catch (Exception e) {
             log.error("❌ 벡터 스토어 재생성 실패", e);
+            isVectorStoreReady = false;
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR,
                     "벡터 스토어 재생성 중 오류가 발생했습니다.");
         }
+    }
+
+    /**
+     * 배치 비동기 처리 (병렬 실행)
+     */
+    @Async("vectorStoreExecutor")
+    public CompletableFuture<Void> processBatchAsync(List<Document> batch) {
+        return CompletableFuture.runAsync(() -> {
+            try {
+                vectorStore.add(batch);
+                log.info("✓ 배치 완료: {}개 문서", batch.size());
+            } catch (Exception e) {
+                log.error("❌ 배치 처리 실패", e);
+                throw new RuntimeException("배치 처리 실패", e);
+            }
+        });
+    }
+
+    private <T> List<List<T>> partitionList(List<T> list, int batchSize) {
+        List<List<T>> batches = new ArrayList<>();
+        for (int i = 0; i < list.size(); i += batchSize) {
+            batches.add(list.subList(i, Math.min(i + batchSize, list.size())));
+        }
+        return batches;
+    }
+
+    public boolean isVectorStoreReady() {
+        return isVectorStoreReady;
     }
 
     private String buildDocumentContent(Place place) {
