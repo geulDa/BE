@@ -1,5 +1,6 @@
 package com.CUK.geulDa.ai.controller;
 
+import com.CUK.geulDa.ai.aspect.RequireVectorStore;
 import com.CUK.geulDa.ai.dto.CourseRecommendResponse;
 import com.CUK.geulDa.ai.dto.RecommendRequest;
 import com.CUK.geulDa.ai.dto.SessionData;
@@ -25,6 +26,7 @@ public class CourseController {
 
     private final CourseRecommendService courseService;
 
+    @RequireVectorStore
     @Operation(summary = "코스 추천", description = "사용자 위치와 선호도를 기반으로 관광 코스를 추천합니다 (JWT 토큰 필요)")
     @PostMapping("/recommend")
     public ResponseEntity<ApiResponse<CourseRecommendResponse>> recommend(
