@@ -38,17 +38,17 @@ public class PlaceService {
                 .findByMemberIdAndPlaceIdWithDetails(memberId, placeId);
 
         if (userPostCard.isPresent()) {
-            UserPostCard upc = userPostCard.get();
             return PlaceDetailResponse.completed(
                     place.getId(),
-                    upc.getPostcard().getImageUrl(),
-                    place.getName(),
+					place.getPlaceImg(),
+					place.getName(),
                     place.getDescription(),
                     place.getAddress()
             );
         } else {
-            return PlaceDetailResponse.incomplete(
+			return PlaceDetailResponse.incomplete(
 				place.getId(),
+				place.getPlaceImg(),
 				place.getName(),
 				place.getDescription(),
 				place.getAddress());

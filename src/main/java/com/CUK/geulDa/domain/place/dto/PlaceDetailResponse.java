@@ -12,7 +12,7 @@ public record PlaceDetailResponse(
         return new PlaceDetailResponse(placeId, true, imageUrl, placeName, description, address);
     }
 
-    public static PlaceDetailResponse incomplete(Long placeId,String placeName, String description, String address) {
-        return new PlaceDetailResponse(placeId, false, null, placeName, description, address);
+    public static PlaceDetailResponse incomplete(Long placeId,String imageUrl,String placeName, String description, String address) {
+        return new PlaceDetailResponse(placeId, false, imageUrl, placeName, description, address);
     }
 }
