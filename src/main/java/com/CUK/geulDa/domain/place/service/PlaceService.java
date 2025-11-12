@@ -47,7 +47,11 @@ public class PlaceService {
                     place.getAddress()
             );
         } else {
-            return PlaceDetailResponse.incomplete(place.getId());
+            return PlaceDetailResponse.incomplete(
+				place.getId(),
+				place.getName(),
+				place.getDescription(),
+				place.getAddress());
         }
     }
 
