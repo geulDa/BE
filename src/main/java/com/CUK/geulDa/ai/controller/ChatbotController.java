@@ -1,5 +1,6 @@
 package com.CUK.geulDa.ai.controller;
 
+import com.CUK.geulDa.ai.aspect.RequireVectorStore;
 import com.CUK.geulDa.ai.dto.ChatMessageRequest;
 import com.CUK.geulDa.ai.dto.ChatResponse;
 import com.CUK.geulDa.ai.service.ChatbotService;
@@ -39,6 +40,7 @@ public class ChatbotController {
         );
     }
 
+    @RequireVectorStore
     @Operation(
             summary = "챗봇 대화",
             description = "챗봇과 대화를 진행합니다. 세션 ID는 X-Chat-Session 헤더로 전달해야 합니다."
