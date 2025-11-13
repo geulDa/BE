@@ -5,6 +5,7 @@ import com.CUK.geulDa.domain.event.dto.EventDetailResponse;
 import com.CUK.geulDa.domain.event.dto.EventListResponse;
 import com.CUK.geulDa.domain.event.dto.NextEventResponse;
 import com.CUK.geulDa.domain.event.repository.EventRepository;
+import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.memberEventBookmark.MemberEventBookmark;
 import com.CUK.geulDa.domain.memberEventBookmark.repository.MemberEventBookmarkRepository;
 import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
@@ -76,13 +77,19 @@ public class EventService {
         return nextEvents;
     }
 
-    public List<EventListResponse> getEventsByDate(LocalDate targetDate, Long memberId) {
+    public List<EventListResponse> getEventsByDate(LocalDate targetDate, Member member) {
         List<Event> events = eventRepository.findByDate(targetDate);
 
-        List<MemberEventBookmark> bookmarks = bookmarkRepository.findByMemberIdWithEvent(memberId);
-        Set<Long> bookmarkedEventIds = bookmarks.stream()
-                .map(bookmark -> bookmark.getEvent().getId())
-                .collect(Collectors.toSet());
+        // 비로그인 사용자: 북마크 정보 없이 반환
+        Set<Long> bookmarkedEventIds;
+        if (member == null) {
+            bookmarkedEventIds = Set.of();
+        } else {
+            List<MemberEventBookmark> bookmarks = bookmarkRepository.findByMemberIdWithEvent(member.getId());
+            bookmarkedEventIds = bookmarks.stream()
+                    .map(bookmark -> bookmark.getEvent().getId())
+                    .collect(Collectors.toSet());
+        }
 
         return events.stream()
                 .map(event -> new EventListResponse(event, bookmarkedEventIds.contains(event.getId())))

@@ -3,8 +3,10 @@ package com.CUK.geulDa.domain.event.controller;
 import com.CUK.geulDa.domain.event.dto.EventDetailResponse;
 import com.CUK.geulDa.domain.event.dto.EventListResponse;
 import com.CUK.geulDa.domain.event.service.EventService;
+import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.global.apiResponse.code.SuccessCode;
 import com.CUK.geulDa.global.apiResponse.response.ApiResponse;
+import com.CUK.geulDa.global.auth.annotation.CurrentMember;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -23,12 +25,12 @@ public class EventController {
 
     private final EventService eventService;
 
-    @Operation(summary = "날짜별 행사 목록 조회", description = "특정 날짜에 열려있는 행사 목록을 조회합니다.")
+    @Operation(summary = "날짜별 행사 목록 조회", description = "특정 날짜에 열려있는 행사 목록을 조회합니다. 로그인한 경우 북마크 여부를 포함합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<EventListResponse>>> getEventsByDate(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-            @RequestParam Long memberId) {
-        List<EventListResponse> events = eventService.getEventsByDate(date, memberId);
+            @CurrentMember(required = false) Member member) {
+        List<EventListResponse> events = eventService.getEventsByDate(date, member);
         return ResponseEntity.ok(ApiResponse.success(SuccessCode.SUCCESS_READ, events));
     }
 

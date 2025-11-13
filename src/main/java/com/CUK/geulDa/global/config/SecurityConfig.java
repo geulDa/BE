@@ -53,6 +53,9 @@ public class SecurityConfig {
                     "/swagger-resources/**",
                     "/api/stamps/collection",
                     "/api/places",
+                    "/api/places/**",
+                    "/api/events",
+                    "/api/events/**",
                     "/api/courses",
                     "/api/courses/recommend",
                     "/api/chatbot/**"
