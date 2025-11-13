@@ -27,15 +27,25 @@ public class PlaceService {
     private final StampRepository stampRepository;
 
 
-    public PlaceDetailResponse getPlaceDetail(Long placeId, Long memberId) {
+    public PlaceDetailResponse getPlaceDetail(Long placeId, Member member) {
         Place place = placeRepository.findById(placeId)
                 .orElseThrow(() -> new BusinessException(
                         ErrorCode.RESOURCE_NOT_FOUND,
                         "ID가 " + placeId + "인 명소를 찾을 수 없습니다."
                 ));
 
+        // 비로그인 사용자: 항상 incomplete 반환
+        if (member == null) {
+            return PlaceDetailResponse.incomplete(
+                    place.getId(),
+                    place.getPlaceImg(),
+                    place.getName(),
+                    place.getDescription(),
+                    place.getAddress());
+        }
+
         Optional<UserPostCard> userPostCard = userPostCardRepository
-                .findByMemberIdAndPlaceIdWithDetails(memberId, placeId);
+                .findByMemberIdAndPlaceIdWithDetails(member.getId(), placeId);
 
         if (userPostCard.isPresent()) {
             return PlaceDetailResponse.completed(
