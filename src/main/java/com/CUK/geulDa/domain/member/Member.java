@@ -1,6 +1,5 @@
 package com.CUK.geulDa.domain.member;
 
-import com.CUK.geulDa.domain.course.Course;
 import com.CUK.geulDa.domain.member.constant.Provider;
 import com.CUK.geulDa.domain.member.constant.Role;
 import com.CUK.geulDa.domain.memberEventBookmark.MemberEventBookmark;
@@ -54,9 +53,6 @@ public class Member extends BaseEntity {
 
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<UserPostCard> postcards = new ArrayList<>();
-
-    @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Course> recommendations = new ArrayList<>();
 
     @OneToMany(mappedBy = "member", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<MemberEventBookmark> bookmarkedEvents = new ArrayList<>();
