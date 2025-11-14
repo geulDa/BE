@@ -5,8 +5,8 @@ import com.CUK.geulDa.ai.dto.RecommendRequest;
 import com.CUK.geulDa.ai.dto.SessionData;
 import com.CUK.geulDa.ai.mcp.BucheonTourMcpServer;
 import com.CUK.geulDa.domain.member.Member;
-import com.CUK.geulDa.domain.place.Place;
-import com.CUK.geulDa.domain.place.service.PlaceService;
+import com.CUK.geulDa.domain.course.Course;
+import com.CUK.geulDa.domain.course.service.CourseService;
 import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
 import com.CUK.geulDa.global.apiResponse.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -30,10 +30,10 @@ import java.util.stream.Collectors;
 public class CourseRecommendService {
 
     // 가톨릭대학교 부천캠퍼스 기본 위치 (김수환관 기준)
-    private static final double DEFAULT_LATITUDE = 37.4985;
-    private static final double DEFAULT_LONGITUDE = 126.7822;
+    private static final double DEFAULT_LATITUDE = 37.4974496;
+    private static final double DEFAULT_LONGITUDE = 126.8007892;
 
-    private final PlaceService placeService;
+    private final CourseService courseService;
     private final ChatClient chatClient;
     private final BucheonTourMcpServer mcpServer;
     private final RedisTemplate<String, Object> redisTemplate;
@@ -71,16 +71,19 @@ public class CourseRecommendService {
                 mcpServer.executeTool("search_places", searchParams);
 
             @SuppressWarnings("unchecked")
-            List<Place> candidates = (List<Place>) searchResult.get("places");
+            List<Course> searchedPlaces = (List<Course>) searchResult.get("places");
 
-            if (candidates == null || candidates.isEmpty()) {
+            // 가변 리스트로 변환 (addAll을 위해 필요)
+            List<Course> candidates = searchedPlaces != null ? new ArrayList<>(searchedPlaces) : new ArrayList<>();
+
+            if (candidates.isEmpty()) {
                 log.debug("초기 검색 결과 없음. 조건 완화 시도");
                 candidates = searchWithFallback(userLat, userLon, radius, normalizedPurpose);
             }
 
             if (candidates.size() < 3) {
                 log.debug("DB 검색 결과 부족 ({}개). AI로 장소 생성 시작", candidates.size());
-                List<Place> aiGeneratedPlaces = generatePlacesWithAI(
+                List<Course> aiGeneratedPlaces = generatePlacesWithAI(
                     userLat, userLon, normalizedPurpose, normalizedTransportation,
                     5 - candidates.size()
                 );
@@ -126,8 +129,8 @@ public class CourseRecommendService {
                 }
             }
 
-            List<Place> mustVisitPlaces = new ArrayList<>();
-            List<Place> finalPlaces = candidates;
+            List<Course> mustVisitPlaces = new ArrayList<>();
+            List<Course> finalPlaces = candidates;
 
             if (!parsed.cleanedMustVisitPlace().isBlank()) {
                 MustVisitResult result = processMustVisitPlace(candidates,
@@ -172,12 +175,12 @@ public class CourseRecommendService {
      * 필수 방문지를 포함하여 AI 기반 장소 추천
      */
     private List<CourseRecommendResponse.PlaceDetail> generateRecommendationWithAI(
-        List<Place> candidates, RecommendRequest request, List<Place> mustVisitPlaces,
+        List<Course> candidates, RecommendRequest request, List<Course> mustVisitPlaces,
         int targetCount) {
 
         List<CourseRecommendResponse.PlaceDetail> result = new ArrayList<>();
 
-        for (Place place : mustVisitPlaces) {
+        for (Course place : mustVisitPlaces) {
             result.add(new CourseRecommendResponse.PlaceDetail(
                 place.getId(),
                 place.getName(),
@@ -192,7 +195,7 @@ public class CourseRecommendService {
         if (!mustVisitPlaces.isEmpty()) {
             log.debug("필수 방문지 {} 개 최종 포함: {}",
                 mustVisitPlaces.size(),
-                mustVisitPlaces.stream().map(Place::getName).collect(Collectors.joining(", ")));
+                mustVisitPlaces.stream().map(Course::getName).collect(Collectors.joining(", ")));
         }
 
         int remainingCount = Math.max(0, targetCount - mustVisitPlaces.size());
@@ -298,7 +301,7 @@ public class CourseRecommendService {
      * AI 응답 파싱
      */
     private List<CourseRecommendResponse.PlaceDetail> parseAIRecommendation(
-        String aiResponse, List<Place> candidates) {
+        String aiResponse, List<Course> candidates) {
         try {
             String jsonPart = extractJsonFromResponse(aiResponse);
             JsonNode root = objectMapper.readTree(jsonPart);
@@ -311,7 +314,7 @@ public class CourseRecommendService {
                     Long placeId = rec.get("placeId").asLong();
 
                     candidates.stream()
-                        .filter(place -> place.getId().equals(placeId))
+                        .filter(place -> place.getId() != null && place.getId().equals(placeId))
                         .findFirst()
                         .ifPresent(place -> details.add(
                             new CourseRecommendResponse.PlaceDetail(
@@ -348,7 +351,7 @@ public class CourseRecommendService {
         return response;
     }
 
-    private record MustVisitResult(List<Place> mustVisitPlaces, List<Place> candidates) {
+    private record MustVisitResult(List<Course> mustVisitPlaces, List<Course> candidates) {
 
     }
 
@@ -412,7 +415,7 @@ public class CourseRecommendService {
         return new ParsedRequest(cleaned, excludeCategories, placeCount);
     }
 
-    private MustVisitResult processMustVisitPlace(List<Place> candidates, String mustVisitPlace) {
+    private MustVisitResult processMustVisitPlace(List<Course> candidates, String mustVisitPlace) {
         if (mustVisitPlace == null || mustVisitPlace.isBlank()) {
             return new MustVisitResult(List.of(), candidates);
         }
@@ -437,7 +440,7 @@ public class CourseRecommendService {
     /**
      * 복수 장소 검색 (키워드로 관련된 모든 장소 찾기)
      */
-    private MustVisitResult findMultiplePlaces(List<Place> candidates, String request) {
+    private MustVisitResult findMultiplePlaces(List<Course> candidates, String request) {
         String keyword = request
             .replace("만", "")
             .replace("모두", "")
@@ -454,17 +457,17 @@ public class CourseRecommendService {
 
         log.debug("추출된 키워드: '{}'", keyword);
 
-        List<Place> allPlaces = placeService.getAllVisiblePlaces();
-        List<Place> matchedPlaces = allPlaces.stream()
+        List<Course> allPlaces = courseService.getAllVisibleCourses();
+        List<Course> matchedPlaces = allPlaces.stream()
             .filter(place -> place.getName().contains(keyword))
             .toList();
 
         if (!matchedPlaces.isEmpty()) {
             log.debug("키워드 '{}' 매칭 성공: {}개 장소 발견", keyword, matchedPlaces.size());
             Set<Long> matchedIds = matchedPlaces.stream()
-                .map(Place::getId)
+                .map(Course::getId)
                 .collect(Collectors.toSet());
-            List<Place> others = candidates.stream()
+            List<Course> others = candidates.stream()
                 .filter(p -> !matchedIds.contains(p.getId()))
                 .toList();
             return new MustVisitResult(matchedPlaces, others);
@@ -477,58 +480,58 @@ public class CourseRecommendService {
     /**
      * 단일 장소 검색
      */
-    private MustVisitResult findSinglePlace(List<Place> candidates, String mustVisitPlace) {
+    private MustVisitResult findSinglePlace(List<Course> candidates, String mustVisitPlace) {
         // 1단계: 정확한 이름 매칭 시도
-        Optional<Place> exactMatch = candidates.stream()
+        Optional<Course> exactMatch = candidates.stream()
             .filter(place -> place.getName().equals(mustVisitPlace))
             .findFirst();
 
         if (exactMatch.isPresent()) {
-            Place mustVisit = exactMatch.get();
+            Course mustVisit = exactMatch.get();
             log.debug("정확한 이름 매칭 성공: {}", mustVisit.getName());
-            List<Place> others = candidates.stream()
+            List<Course> others = candidates.stream()
                 .filter(p -> !p.getId().equals(mustVisit.getId()))
                 .toList();
             return new MustVisitResult(List.of(mustVisit), others);
         }
 
         // 2단계: 부분 이름 매칭 시도
-        Optional<Place> partialMatch = candidates.stream()
+        Optional<Course> partialMatch = candidates.stream()
             .filter(place -> place.getName().contains(mustVisitPlace) ||
                 mustVisitPlace.contains(place.getName()))
             .findFirst();
 
         if (partialMatch.isPresent()) {
-            Place mustVisit = partialMatch.get();
+            Course mustVisit = partialMatch.get();
             log.debug("부분 이름 매칭 성공: {}", mustVisit.getName());
-            List<Place> others = candidates.stream()
+            List<Course> others = candidates.stream()
                 .filter(p -> !p.getId().equals(mustVisit.getId()))
                 .toList();
             return new MustVisitResult(List.of(mustVisit), others);
         }
 
         // 3단계: 전체 DB에서 정확한 이름 매칭
-        List<Place> allPlaces = placeService.getAllVisiblePlaces();
-        Optional<Place> exactMatchInDb = allPlaces.stream()
+        List<Course> allPlaces = courseService.getAllVisibleCourses();
+        Optional<Course> exactMatchInDb = allPlaces.stream()
             .filter(place -> place.getName().equals(mustVisitPlace))
             .findFirst();
 
         if (exactMatchInDb.isPresent()) {
-            Place mustVisit = exactMatchInDb.get();
+            Course mustVisit = exactMatchInDb.get();
             log.debug("전체 DB에서 정확한 매칭 성공: {}", mustVisit.getName());
             return new MustVisitResult(List.of(mustVisit), candidates);
         }
 
         // 4단계: AI 맥락 파악
         log.debug("AI 맥락 파악 시작: '{}'", mustVisitPlace);
-        List<Place> allVisiblePlaces = placeService.getAllVisiblePlaces();
-        Optional<Place> aiSelectedPlace = selectPlaceByAI(allVisiblePlaces, mustVisitPlace);
+        List<Course> allVisiblePlaces = courseService.getAllVisibleCourses();
+        Optional<Course> aiSelectedPlace = selectPlaceByAI(allVisiblePlaces, mustVisitPlace);
 
         if (aiSelectedPlace.isPresent()) {
-            Place mustVisit = aiSelectedPlace.get();
+            Course mustVisit = aiSelectedPlace.get();
             log.debug("AI 맥락 파악 성공: {} (요청: '{}')", mustVisit.getName(), mustVisitPlace);
 
-            List<Place> others = candidates.stream()
+            List<Course> others = candidates.stream()
                 .filter(p -> !p.getId().equals(mustVisit.getId()))
                 .toList();
             return new MustVisitResult(List.of(mustVisit), others);
@@ -536,15 +539,15 @@ public class CourseRecommendService {
 
         // 5단계: 벡터 스토어 의미론적 검색
         log.debug("벡터 스토어 의미론적 검색: '{}'", mustVisitPlace);
-        Optional<Place> semanticMatch = searchBySemanticSimilarity(mustVisitPlace);
+        Optional<Course> semanticMatch = searchBySemanticSimilarity(mustVisitPlace);
 
         if (semanticMatch.isPresent()) {
-            Place candidate = semanticMatch.get();
+            Course candidate = semanticMatch.get();
 
             if (isRelevantPlace(candidate, mustVisitPlace)) {
                 log.debug("의미론적 검색 성공: {} (요청: '{}')", candidate.getName(), mustVisitPlace);
 
-                List<Place> others = candidates.stream()
+                List<Course> others = candidates.stream()
                     .filter(p -> !p.getId().equals(candidate.getId()))
                     .toList();
                 return new MustVisitResult(List.of(candidate), others);
@@ -556,16 +559,16 @@ public class CourseRecommendService {
 
         // 6단계: AI로 주변 지역 실제 장소 생성
         log.debug("AI로 주변 지역에서 '{}' 검색 시작", mustVisitPlace);
-        List<Place> aiGeneratedPlaces = generatePlacesByUserRequest(mustVisitPlace);
+        List<Course> aiGeneratedPlaces = generatePlacesByUserRequest(mustVisitPlace);
 
         if (!aiGeneratedPlaces.isEmpty()) {
             log.debug("AI가 주변 지역에서 {}개 장소 생성: {}",
                 aiGeneratedPlaces.size(),
                 aiGeneratedPlaces.stream()
-                    .map(Place::getName)
+                    .map(Course::getName)
                     .collect(Collectors.joining(", ")));
 
-            Place mustVisit = aiGeneratedPlaces.get(0);
+            Course mustVisit = aiGeneratedPlaces.get(0);
             return new MustVisitResult(List.of(mustVisit), candidates);
         }
 
@@ -577,7 +580,7 @@ public class CourseRecommendService {
     /**
      * AI로 애매모호한 요청 해석 및 장소 선택
      */
-    private Optional<Place> selectPlaceByAI(List<Place> candidates, String userRequest) {
+    private Optional<Course> selectPlaceByAI(List<Course> candidates, String userRequest) {
         if (candidates.isEmpty()) {
             return Optional.empty();
         }
@@ -659,7 +662,7 @@ public class CourseRecommendService {
     /**
      * AI로 장소 관련성 검증
      */
-    private boolean isRelevantPlace(Place place, String userRequest) {
+    private boolean isRelevantPlace(Course place, String userRequest) {
         String prompt = String.format("""
                 사용자 요청: "%s"
                 장소: %s (카테고리: %s, 설명: %s)
@@ -704,7 +707,7 @@ public class CourseRecommendService {
     /**
      * 벡터 스토어 의미론적 검색
      */
-    private Optional<Place> searchBySemanticSimilarity(String query) {
+    private Optional<Course> searchBySemanticSimilarity(String query) {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> searchResult = (Map<String, Object>)
@@ -716,7 +719,7 @@ public class CourseRecommendService {
             }
 
             @SuppressWarnings("unchecked")
-            List<Place> places = (List<Place>) searchResult.get("places");
+            List<Course> places = (List<Course>) searchResult.get("places");
 
             if (places != null && !places.isEmpty()) {
                 return Optional.of(places.get(0));
@@ -732,7 +735,7 @@ public class CourseRecommendService {
     /**
      * AI로 사용자 요청에 맞는 실제 장소 생성
      */
-    private List<Place> generatePlacesByUserRequest(String userRequest) {
+    private List<Course> generatePlacesByUserRequest(String userRequest) {
         String prompt = String.format("""
             사용자가 필수로 방문하고 싶은 장소: "%s"
             
@@ -794,10 +797,10 @@ public class CourseRecommendService {
                 return List.of();
             }
 
-            List<Place> generatedPlaces = new ArrayList<>();
+            List<Course> generatedPlaces = new ArrayList<>();
             for (JsonNode placeNode : placesNode) {
                 try {
-                    Place place = Place.builder()
+                    Course place = Course.builder()
                         .name(placeNode.get("name").asText())
                         .address(placeNode.get("address").asText())
                         .latitude(placeNode.get("latitude").asDouble())
@@ -813,9 +816,11 @@ public class CourseRecommendService {
                         .placeImg(null)
                         .build();
 
-                    generatedPlaces.add(place);
+                    // DB에 저장하여 ID 할당
+                    Course savedPlace = courseService.saveCourse(place);
+                    generatedPlaces.add(savedPlace);
                     log.debug("AI 생성: {} - {} ({})",
-                        place.getName(), place.getAddress(), place.getCategory());
+                        savedPlace.getName(), savedPlace.getAddress(), savedPlace.getCategory());
 
                 } catch (Exception e) {
                     log.warn("장소 파싱 실패", e);
@@ -961,7 +966,7 @@ public class CourseRecommendService {
         };
     }
 
-    private List<Place> searchWithFallback(double lat, double lon, double radius, String purpose) {
+    private List<Course> searchWithFallback(double lat, double lon, double radius, String purpose) {
         log.debug("반경 2배 확대 ({}km → {}km)", radius, radius * 2);
         Map<String, Object> params = Map.of(
             "latitude", lat,
@@ -974,11 +979,11 @@ public class CourseRecommendService {
         Map<String, Object> result = (Map<String, Object>) mcpServer.executeTool("search_places",
             params);
         @SuppressWarnings("unchecked")
-        List<Place> places = (List<Place>) result.get("places");
+        List<Course> places = (List<Course>) result.get("places");
 
         if (places != null && places.size() >= 3) {
             log.debug("반경 확대로 {}개 장소 발견", places.size());
-            return places;
+            return new ArrayList<>(places);
         }
 
         log.debug("목적 필터 제거");
@@ -992,19 +997,19 @@ public class CourseRecommendService {
         Map<String, Object> result2 = (Map<String, Object>) mcpServer.executeTool("search_places",
             params);
         @SuppressWarnings("unchecked")
-        List<Place> places2 = (List<Place>) result2.get("places");
+        List<Course> places2 = (List<Course>) result2.get("places");
 
         if (places2 != null && places2.size() >= 3) {
             log.debug("목적 필터 제거로 {}개 장소 발견", places2.size());
-            return places2;
+            return new ArrayList<>(places2);
         }
 
         log.debug("부천 전체 장소 검색");
-        List<Place> allPlaces = placeService.getAllVisiblePlaces();
-        return allPlaces.stream().limit(10).toList();
+        List<Course> allPlaces = courseService.getAllVisibleCourses();
+        return allPlaces.stream().limit(10).collect(Collectors.toCollection(ArrayList::new));
     }
 
-    private List<Place> generatePlacesWithAI(double centerLat, double centerLon,
+    private List<Course> generatePlacesWithAI(double centerLat, double centerLon,
         String purpose, String transportation,
         int count) {
         String prompt = String.format("""
@@ -1057,7 +1062,7 @@ public class CourseRecommendService {
         }
     }
 
-    private List<Place> parseAIGeneratedPlaces(String aiResponse, String purpose) {
+    private List<Course> parseAIGeneratedPlaces(String aiResponse, String purpose) {
         try {
             String jsonPart = extractJsonFromResponse(aiResponse);
             JsonNode root = objectMapper.readTree(jsonPart);
@@ -1068,10 +1073,11 @@ public class CourseRecommendService {
                 return List.of();
             }
 
-            List<Place> generatedPlaces = new ArrayList<>();
+            List<Course> generatedPlaces = new ArrayList<>();
             for (JsonNode placeNode : placesNode) {
                 try {
-                    Place place = Place.builder()
+                    // AI 생성 장소는 DB에 저장하지 않고 임시 ID 할당
+                    Course place = Course.builder()
                         .name(placeNode.get("name").asText())
                         .address(placeNode.get("address").asText())
                         .latitude(placeNode.get("latitude").asDouble())
@@ -1088,7 +1094,9 @@ public class CourseRecommendService {
                         .placeImg(null)
                         .build();
 
-                    generatedPlaces.add(place);
+                    // DB에 저장하여 ID 할당
+                    Course savedPlace = courseService.saveCourse(place);
+                    generatedPlaces.add(savedPlace);
                     log.debug("AI 생성: {} ({})", place.getName(), place.getAddress());
 
                 } catch (Exception e) {
