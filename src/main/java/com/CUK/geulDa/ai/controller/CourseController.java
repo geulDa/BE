@@ -27,13 +27,12 @@ public class CourseController {
     private final CourseRecommendService courseService;
 
     @RequireVectorStore
-    @Operation(summary = "코스 추천", description = "사용자 위치와 선호도를 기반으로 관광 코스를 추천합니다 (JWT 토큰 필요)")
+    @Operation(summary = "코스 추천", description = "사용자 위치와 선호도를 기반으로 관광 코스를 추천합니다")
     @PostMapping("/recommend")
     public ResponseEntity<ApiResponse<CourseRecommendResponse>> recommend(
-            @CurrentMember Member member,
             @Valid @RequestBody RecommendRequest request) {
-        log.info("코스 추천 요청: 사용자={}, {}", member.getId(), request);
-        CourseRecommendResponse response = courseService.recommend(member, request);
+        log.info("코스 추천 요청: {}", request);
+        CourseRecommendResponse response = courseService.recommend(request);
         return ResponseEntity.ok(
                 ApiResponse.success(SuccessCode.SUCCESS_AI_COURSE_RECOMMEND, response)
         );
