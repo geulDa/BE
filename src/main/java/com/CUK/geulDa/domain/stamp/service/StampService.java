@@ -34,7 +34,7 @@ public class StampService {
     private final PostCardRepository postCardRepository;
     private final UserPostCardRepository userPostCardRepository;
 
-    private static final double ACQUISITION_RADIUS_METERS = 300.0;
+    private static final double ACQUISITION_RADIUS_METERS = 5000.0;
     private static final double HIDDEN_POSTCARD_PROBABILITY = 0.1; // 10% 확률
     private final Random random = new Random();
 
@@ -70,7 +70,7 @@ public class StampService {
         if (!isWithinRadius) {
             throw new BusinessException(
                     ErrorCode.INVALID_INPUT,
-                    "명소 300m 반경 이내에서만 획득할 수 있습니다."
+                    "명소 5km 반경 이내에서만 획득할 수 있습니다."
             );
         }
 
