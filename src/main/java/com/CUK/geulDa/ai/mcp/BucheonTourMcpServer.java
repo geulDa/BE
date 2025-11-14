@@ -1,7 +1,7 @@
 package com.CUK.geulDa.ai.mcp;
 
-import com.CUK.geulDa.domain.place.Place;
-import com.CUK.geulDa.domain.place.service.PlaceService;
+import com.CUK.geulDa.domain.course.Course;
+import com.CUK.geulDa.domain.course.service.CourseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.document.Document;
@@ -17,7 +17,7 @@ import java.util.Map;
 @Slf4j
 public class BucheonTourMcpServer implements McpServer {
 
-    private final PlaceService placeService;
+    private final CourseService courseService;
     private final VectorStore vectorStore;
 
     @Override
@@ -52,29 +52,29 @@ public class BucheonTourMcpServer implements McpServer {
             double radius = params.containsKey("radius") ?
                     ((Number) params.get("radius")).doubleValue() : 3.0;
 
-            List<Place> places = placeService.findPlacesWithinRadius(lat, lon, radius);
+            List<Course> courses = courseService.findPlacesWithinRadius(lat, lon, radius);
 
             // 목적별 필터링
             if (params.containsKey("purpose")) {
                 String purpose = (String) params.get("purpose");
-                places = placeService.filterByPurpose(places, purpose);
+                courses = courseService.filterByPurpose(courses, purpose);
             }
 
             return Map.of(
-                    "places", places.stream().limit(10).toList(),
+                    "places", courses.stream().limit(10).toList(),
                     "searchType", "radius",
-                    "count", Math.min(places.size(), 10)
+                    "count", Math.min(courses.size(), 10)
             );
         }
         // 키워드 검색
         else if (params.containsKey("keyword")) {
             String keyword = (String) params.get("keyword");
-            List<Place> places = placeService.findByKeyword(keyword);
+            List<Course> courses = courseService.findByKeyword(keyword);
 
             return Map.of(
-                    "places", places.stream().limit(5).toList(),
+                    "places", courses.stream().limit(5).toList(),
                     "searchType", "keyword",
-                    "count", Math.min(places.size(), 5)
+                    "count", Math.min(courses.size(), 5)
             );
         }
 
@@ -88,11 +88,11 @@ public class BucheonTourMcpServer implements McpServer {
 
         Long placeId = ((Number) params.get("placeId")).longValue();
 
-        return placeService.findByIds(List.of(placeId)).stream()
+        return courseService.findByIds(List.of(placeId)).stream()
                 .findFirst()
-                .map(place -> Map.of(
-                        "place", place,
-                        "tags", placeService.getTourPurposeTags(place)
+                .map(course -> Map.of(
+                        "place", course,
+                        "tags", courseService.getTourPurposeTags(course)
                 ))
                 .orElse(Map.of("error", "존재하지 않는 장소 ID: " + placeId));
     }
@@ -110,7 +110,7 @@ public class BucheonTourMcpServer implements McpServer {
                     SearchRequest.builder().query(query).topK(3).build()
             );
 
-            List<Long> placeIds = results.stream()
+            List<Long> courseIds = results.stream()
                     .map(doc -> {
                         try {
                             return Long.parseLong(doc.getId());
@@ -122,17 +122,17 @@ public class BucheonTourMcpServer implements McpServer {
                     .filter(id -> id != null)
                     .toList();
 
-            if (placeIds.isEmpty()) {
+            if (courseIds.isEmpty()) {
                 log.warn("벡터 검색 결과 없음, 키워드 검색으로 대체: {}", query);
                 return searchPlaces(Map.of("keyword", query));
             }
 
-            List<Place> places = placeService.findByIds(placeIds);
+            List<Course> courses = courseService.findByIds(courseIds);
 
             return Map.of(
-                    "places", places,
+                    "places", courses,
                     "searchType", "semantic",
-                    "count", places.size()
+                    "count", courses.size()
             );
         } catch (Exception e) {
             log.warn("벡터 검색 실패, 키워드 검색으로 대체: {}", query, e);

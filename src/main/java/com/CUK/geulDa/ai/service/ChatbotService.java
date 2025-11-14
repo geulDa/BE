@@ -3,8 +3,8 @@ package com.CUK.geulDa.ai.service;
 import com.CUK.geulDa.ai.dto.ChatRequest;
 import com.CUK.geulDa.ai.dto.ChatResponse;
 import com.CUK.geulDa.ai.mcp.BucheonTourMcpServer;
-import com.CUK.geulDa.domain.place.Place;
-import com.CUK.geulDa.domain.place.service.PlaceService;
+import com.CUK.geulDa.domain.course.Course;
+import com.CUK.geulDa.domain.course.service.CourseService;
 import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
 import com.CUK.geulDa.global.apiResponse.exception.BusinessException;
 import jakarta.annotation.PostConstruct;
@@ -35,7 +35,7 @@ public class ChatbotService {
     private final ChatClient chatClient;
     private final BucheonTourMcpServer mcpServer;
     private final VectorStore vectorStore;
-    private final PlaceService placeService;
+    private final CourseService courseService;
     private final RedisTemplate<String, Object> redisTemplate;
 
     @Value("${geulda.vector-store.path:vector-store.json}")
@@ -72,13 +72,13 @@ public class ChatbotService {
             long startTime = System.currentTimeMillis();
 
             // 1. 데이터 조회
-            List<Place> places = placeService.getAllVisiblePlaces();
-            List<Document> documents = places.stream()
-                    .filter(place -> StringUtils.hasText(place.getDescription()))
-                    .map(place -> new Document(
-                            place.getId().toString(),
-                            buildDocumentContent(place),
-                            buildDocumentMetadata(place)
+            List<Course> courses = courseService.getAllVisibleCourses();
+            List<Document> documents = courses.stream()
+                    .filter(course -> StringUtils.hasText(course.getDescription()))
+                    .map(course -> new Document(
+                            course.getId().toString(),
+                            buildDocumentContent(course),
+                            buildDocumentMetadata(course)
                     ))
                     .toList();
 
@@ -145,13 +145,13 @@ public class ChatbotService {
             }
 
             // 2. 데이터 조회 및 Document 변환
-            List<Place> places = placeService.getAllVisiblePlaces();
-            List<Document> documents = places.stream()
-                    .filter(place -> StringUtils.hasText(place.getDescription()))
-                    .map(place -> new Document(
-                            place.getId().toString(),
-                            buildDocumentContent(place),
-                            buildDocumentMetadata(place)
+            List<Course> courses = courseService.getAllVisibleCourses();
+            List<Document> documents = courses.stream()
+                    .filter(course -> StringUtils.hasText(course.getDescription()))
+                    .map(course -> new Document(
+                            course.getId().toString(),
+                            buildDocumentContent(course),
+                            buildDocumentMetadata(course)
                     ))
                     .toList();
 
@@ -222,26 +222,26 @@ public class ChatbotService {
         return isVectorStoreReady;
     }
 
-    private String buildDocumentContent(Place place) {
+    private String buildDocumentContent(Course course) {
         StringBuilder content = new StringBuilder();
-        content.append(place.getName()).append(" ");
+        content.append(course.getName()).append(" ");
 
-        if (StringUtils.hasText(place.getDescription())) {
-            content.append(place.getDescription()).append(" ");
+        if (StringUtils.hasText(course.getDescription())) {
+            content.append(course.getDescription()).append(" ");
         }
 
-        if (StringUtils.hasText(place.getCategory())) {
-            content.append(place.getCategory()).append(" ");
+        if (StringUtils.hasText(course.getCategory())) {
+            content.append(course.getCategory()).append(" ");
         }
 
         return content.toString().trim();
     }
 
-    private Map<String, Object> buildDocumentMetadata(Place place) {
+    private Map<String, Object> buildDocumentMetadata(Course course) {
         Map<String, Object> metadata = new HashMap<>();
-        metadata.put("name", place.getName());
-        metadata.put("category", place.getCategory() != null ? place.getCategory() : "");
-        metadata.put("address", place.getAddress() != null ? place.getAddress() : "");
+        metadata.put("name", course.getName());
+        metadata.put("category", course.getCategory() != null ? course.getCategory() : "");
+        metadata.put("address", course.getAddress() != null ? course.getAddress() : "");
 
         return metadata;
     }
@@ -371,17 +371,17 @@ public class ChatbotService {
         }
 
         @SuppressWarnings("unchecked")
-        List<Place> places = (List<Place>) searchResult.get("places");
+        List<Course> courses = (List<Course>) searchResult.get("places");
 
-        if (places == null || places.isEmpty()) {
+        if (courses == null || courses.isEmpty()) {
             return "현재 검색된 장소가 없습니다.";
         }
 
-        return places.stream()
-                .map(place -> String.format("- %s: %s (%s)",
-                        place.getName(),
-                        place.getDescription() != null ? place.getDescription() : "",
-                        place.getAddress() != null ? place.getAddress() : ""))
+        return courses.stream()
+                .map(course -> String.format("- %s: %s (%s)",
+                        course.getName(),
+                        course.getDescription() != null ? course.getDescription() : "",
+                        course.getAddress() != null ? course.getAddress() : ""))
                 .collect(Collectors.joining("\n"));
     }
 
@@ -398,16 +398,16 @@ public class ChatbotService {
         }
 
         @SuppressWarnings("unchecked")
-        List<Place> places = (List<Place>) searchResult.get("places");
+        List<Course> courses = (List<Course>) searchResult.get("places");
 
-        if (places == null || places.isEmpty()) {
+        if (courses == null || courses.isEmpty()) {
             return "현재 검색된 장소가 없습니다.";
         }
 
-        return places.stream()
-                .map(place -> String.format("- %s: %s",
-                        place.getName(),
-                        place.getDescription() != null ? place.getDescription() : ""))
+        return courses.stream()
+                .map(course -> String.format("- %s: %s",
+                        course.getName(),
+                        course.getDescription() != null ? course.getDescription() : ""))
                 .collect(Collectors.joining("\n"));
     }
 
