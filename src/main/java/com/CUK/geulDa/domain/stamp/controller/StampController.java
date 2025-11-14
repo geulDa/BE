@@ -35,7 +35,7 @@ public class StampController {
 
     @Operation(
         summary = "스탬프 획득",
-        description = "현재 로그인한 사용자가 명소 100m 반경 내에서 스탬프를 획득하고 엽서를 발급받습니다. (JWT 토큰 필요)"
+        description = "현재 로그인한 사용자가 명소 300m 반경 내에서 스탬프를 획득하고 엽서를 발급받습니다. (JWT 토큰 필요)"
     )
     @PostMapping("/{placeId}/acquire")
     public ResponseEntity<ApiResponse<StampAcquireResponse>> acquireStamp(
