@@ -7,6 +7,7 @@ import com.CUK.geulDa.ai.mcp.BucheonTourMcpServer;
 import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.course.Course;
 import com.CUK.geulDa.domain.course.service.CourseService;
+import com.CUK.geulDa.domain.place.service.GooglePlacesService;
 import com.CUK.geulDa.global.apiResponse.code.ErrorCode;
 import com.CUK.geulDa.global.apiResponse.exception.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -37,6 +38,7 @@ public class CourseRecommendService {
     private final ChatClient chatClient;
     private final BucheonTourMcpServer mcpServer;
     private final RedisTemplate<String, Object> redisTemplate;
+    private final GooglePlacesService googlePlacesService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public CourseRecommendResponse recommend(RecommendRequest request) {
@@ -188,7 +190,7 @@ public class CourseRecommendService {
                     place.getLatitude(),
                     place.getLongitude(),
                     place.getDescription(),
-                    place.getPlaceImg()
+                    getPlaceImageUrl(place)
             ));
         }
 
@@ -290,7 +292,7 @@ public class CourseRecommendService {
                             place.getLatitude(),
                             place.getLongitude(),
                             place.getDescription(),
-                            place.getPlaceImg()
+                            getPlaceImageUrl(place)
                     )));
 
             return result;
@@ -324,7 +326,7 @@ public class CourseRecommendService {
                                             place.getLatitude(),
                                             place.getLongitude(),
                                             place.getDescription(),
-                                            place.getPlaceImg()
+                                            getPlaceImageUrl(place)
                                     )
                             ));
                 }
@@ -349,6 +351,52 @@ public class CourseRecommendService {
             return response.substring(start, end + 1);
         }
         return response;
+    }
+
+    /**
+     * Course 객체로부터 실시간으로 Google Places API를 호출하여 이미지 URL 조회
+     */
+    private String getPlaceImageUrl(Course course) {
+        if (course == null) {
+            return null;
+        }
+
+        try {
+            // 1차 시도: 장소명, 주소, 좌표로 이미지 검색
+            Optional<String> imageUrl = googlePlacesService.searchPlaceImageUrl(
+                    course.getName(),
+                    course.getAddress(),
+                    course.getLatitude(),
+                    course.getLongitude()
+            );
+
+            if (imageUrl.isPresent()) {
+                log.debug("이미지 조회 성공: {} -> {}", course.getName(), imageUrl.get());
+                return imageUrl.get();
+            }
+
+            // 2차 시도: 좌표 기반 Nearby Search
+            if (course.getLatitude() != null && course.getLongitude() != null) {
+                imageUrl = googlePlacesService.searchPlaceImageUrlByCoordinates(
+                        course.getName(),
+                        course.getAddress(),
+                        course.getLatitude(),
+                        course.getLongitude()
+                );
+
+                if (imageUrl.isPresent()) {
+                    log.debug("좌표 기반 이미지 조회 성공: {} -> {}", course.getName(), imageUrl.get());
+                    return imageUrl.get();
+                }
+            }
+
+            log.debug("이미지 조회 실패: {}", course.getName());
+            return null;
+
+        } catch (Exception e) {
+            log.warn("이미지 조회 중 오류 발생: {}", course.getName(), e);
+            return null;
+        }
     }
 
     private record MustVisitResult(List<Course> mustVisitPlaces, List<Course> candidates) {
