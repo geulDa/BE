@@ -40,32 +40,12 @@ public class Place extends BaseEntity {
     // 비디오
     private String video;
 
-    @Column(columnDefinition = "TEXT")
+    // 장소 이미지
     private String placeImg;
 
     // 스탬프 획득 시 시스템 메시지
     @Column(columnDefinition = "TEXT")
     private String systemMessage;
-
-    // 카테고리
-    @Column(name = "category")
-    private String category;
-
-    // 관광 목적 태그
-    @Column(name = "tour_purpose_tags")
-    private String tourPurposeTags;
-
-    // 권장 방문 시간
-    @Column(name = "recommended_duration")
-    private Integer recommendedDuration;
-
-    // 인기도 점수 (0-100, 기본값 50)
-    @Column(name = "popularity_score")
-    private Integer popularityScore = 50;
-
-    // 데이터 출처
-    @Column(name = "data_source")
-    private String dataSource = "manual";
 
     // 연관관계
     @OneToMany(mappedBy = "place", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -73,10 +53,8 @@ public class Place extends BaseEntity {
 
     @Builder
     public Place(String name, String description, String address,
-                 Double latitude, Double longitude, Boolean isHidden,
-                 String video, String placeImg, String systemMessage,
-                 String category, String tourPurposeTags, Integer recommendedDuration,
-                 Integer popularityScore, String dataSource) {
+        Double latitude, Double longitude, Boolean isHidden,
+        String video, String placeImg, String systemMessage) {
         this.name = name;
         this.description = description;
         this.address = address;
@@ -86,10 +64,5 @@ public class Place extends BaseEntity {
         this.video = video;
         this.placeImg = placeImg;
         this.systemMessage = systemMessage;
-        this.category = category;
-        this.tourPurposeTags = tourPurposeTags;
-        this.recommendedDuration = recommendedDuration;
-        this.popularityScore = popularityScore != null ? popularityScore : 50;
-        this.dataSource = dataSource != null ? dataSource : "manual";
     }
 }
