@@ -58,6 +58,7 @@ public class SecurityConfig {
                     "/api/events/**",
                     "/api/courses",
                     "/api/courses/recommend",
+                    "/api/courses/session/**",
                     "/api/chatbot/**"
                 ).permitAll()
 
