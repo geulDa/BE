@@ -16,7 +16,7 @@ import java.io.IOException;
 public class OAuth2FailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
     // 프론트엔드 URL (개발/프로덕션 환경에 따라 변경)
-    private static final String FRONTEND_URL = "https://www.geulda.kr";
+    private static final String FRONTEND_URL = "http://localhost:3000";
 
     @Override
     public void onAuthenticationFailure(HttpServletRequest request, HttpServletResponse response,
