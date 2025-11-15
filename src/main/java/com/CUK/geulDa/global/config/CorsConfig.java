@@ -20,7 +20,8 @@ public class CorsConfig {
                 "http://localhost:5173",
                 "https://geulda.vercel.app",
                 "https://api.geulda.kr",
-                "https://geulda.kr"
+                "https://geulda.kr",
+                "https://www.geulda.kr"
         ));
 
         configuration.setAllowedMethods(List.of(
