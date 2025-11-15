@@ -1,0 +1,36 @@
+---
+- name: Deploy GeulDa App (Blue/Green)
+  hosts: all
+  become: yes
+
+  vars:
+    image_name: "kyumin19/geulda-be:latest"
+    container_name: "geulda-app"
+    health_url: "http://localhost:{{ app_port }}/health"
+
+  tasks:
+
+    - name: Stop existing container
+      shell: docker rm -f {{ container_name }} 2>/dev/null || true
+
+    - name: Pull latest docker image
+      shell: docker pull {{ image_name }}
+
+    - name: Run new container
+      shell: |
+        docker run -d \
+        --name {{ container_name }} \
+        --env-file /home/ubuntu/.env \
+        -p {{ app_port }}:8080 \
+        --restart unless-stopped \
+        {{ image_name }}
+
+    - name: Health Check
+      uri:
+        url: "{{ health_url }}"
+        method: GET
+        status_code: 200
+      register: result
+      retries: 12
+      delay: 5
+      until: result.status == 200
