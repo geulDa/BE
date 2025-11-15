@@ -15,6 +15,7 @@ import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SimpleVectorStore;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
@@ -260,6 +261,7 @@ public class ChatbotService {
         return sessionId;
     }
 
+    @Cacheable(value = "chatbot", key = "#sessionId + ':' + #message")
     public ChatResponse chat(String sessionId, String message) {
         // 세션 검증
         validateSession(sessionId);
