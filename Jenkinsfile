@@ -37,36 +37,35 @@ pipeline {
                 echo "⚡ Optimized Gradle Build 시작"
 
                 sh '''
+                    mkdir -p ~/.gradle
                     echo "org.gradle.daemon=true" >> ~/.gradle/gradle.properties
                     echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
                     echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
                     echo "org.gradle.configureondemand=true" >> ~/.gradle/gradle.properties
 
                     chmod +x ./gradlew
-
-                    ./gradlew clean build -x test \
-                        --no-daemon \
-                        --parallel \
-                        --configure-on-demand
+                    ./gradlew clean build -x test --parallel --configure-on-demand
                 '''
             }
         }
 
         /* =======================================================================
-         * 2. Docker Build + Cache 최적화
+         * 2. Docker Build + Cache
          * ======================================================================= */
         stage('Docker Build & Push (Layer Cache)') {
             when { branch 'main' }
             steps {
-                withCredentials([usernamePassword(credentialsId: 'dockerhub-cred',
-                    usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
-
+                withCredentials([usernamePassword(
+                    credentialsId: 'dockerhub-cred',
+                    usernameVariable: 'DOCKER_USER',
+                    passwordVariable: 'DOCKER_PASS'
+                )]) {
                     echo "🐳 Docker Build with Layer Cache"
 
                     sh '''
                         docker build \
-                          --cache-from=$IMAGE_NAME:latest \
-                          -t $IMAGE_NAME:latest .
+                            --cache-from=$IMAGE_NAME:latest \
+                            -t $IMAGE_NAME:latest .
 
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push $IMAGE_NAME:latest
@@ -76,7 +75,23 @@ pipeline {
         }
 
         /* =======================================================================
-         * 3. 다음 배포 타겟 결정
+         * 3. AWS Credentials 로드
+         * ======================================================================= */
+        stage('Load AWS Credentials') {
+            when { branch 'main' }
+            steps {
+                withCredentials([usernamePassword(
+                    credentialsId: 'aws-access-key',
+                    usernameVariable: 'AWS_ACCESS_KEY_ID',
+                    passwordVariable: 'AWS_SECRET_ACCESS_KEY'
+                )]) {
+                    echo "🔐 AWS 자격증명 로드 완료"
+                }
+            }
+        }
+
+        /* =======================================================================
+         * 4. Blue/Green 현재 상태 확인
          * ======================================================================= */
         stage('Determine Blue/Green Target') {
             when { branch 'main' }
@@ -110,7 +125,7 @@ pipeline {
         }
 
         /* =======================================================================
-         * 4. AWX 배포 실행
+         * 5. AWX 배포 실행
          * ======================================================================= */
         stage('Trigger AWX Deployment') {
             when { branch 'main' }
@@ -118,56 +133,52 @@ pipeline {
                 echo "🚀 AWX 템플릿(${env.AWX_TEMPLATE}) 실행"
                 sh """
                     curl -X POST "$AWX_URL/api/v2/job_templates/${env.AWX_TEMPLATE}/launch/" \
-                    -H "Authorization: Bearer $AWX_TOKEN" \
-                    -H "Content-Type: application/json"
+                        -H "Authorization: Bearer $AWX_TOKEN" \
+                        -H "Content-Type: application/json"
                 """
             }
         }
 
         /* =======================================================================
-         * 5. ALB 무중단 전환 (HealthCheck 기반)
+         * 6. HealthCheck 후 ALB 전환
          * ======================================================================= */
         stage('Wait for HealthCheck & Switch TargetGroup') {
             when { branch 'main' }
             steps {
                 script {
-
                     echo "⏳ HealthCheck 안정화 대기 (최대 60초)"
 
                     retry(12) {
                         sleep 5
-                        def count = sh(
+                        def out = sh(
                             script: """
                                 aws elbv2 describe-target-health \
-                                  --target-group-arn ${env.NEXT_TG_ARN} \
-                                  --query 'TargetHealthDescriptions[*].TargetHealth.State' \
-                                  --output text
+                                    --target-group-arn ${env.NEXT_TG_ARN} \
+                                    --query 'TargetHealthDescriptions[*].TargetHealth.State' \
+                                    --output text
                             """,
                             returnStdout: true
                         ).trim()
 
-                        echo "현재 상태: ${count}"
-
-                        if (!count.contains("healthy")) {
+                        echo "현재 상태: ${out}"
+                        if (!out.contains("healthy")) {
                             error("TargetGroup 아직 Healthy 미달")
                         }
                     }
 
-                    echo "💚 새 TargetGroup Healthy 완료 → ALB 전환 시작"
+                    echo "💚 Healthy 완료 → ALB 전환 시작"
 
-                    withAWS(region: 'ap-northeast-2', credentials: 'aws-access-key') {
-                        sh """
-                            aws elbv2 modify-listener \
-                                --listener-arn ${LISTENER_ARN} \
-                                --default-actions Type=forward,TargetGroupArn=${env.NEXT_TG_ARN}
-                        """
-                    }
+                    sh """
+                        aws elbv2 modify-listener \
+                            --listener-arn ${LISTENER_ARN} \
+                            --default-actions Type=forward,TargetGroupArn=${env.NEXT_TG_ARN}
+                    """
                 }
             }
         }
 
         /* =======================================================================
-         * 6. Discord 알림
+         * 7. Discord 성공 알림
          * ======================================================================= */
         stage('Discord Notification') {
             when { branch 'main' }
@@ -181,13 +192,16 @@ pipeline {
         }
     }
 
+    /* =======================================================================
+     * 실패 알림
+     * ======================================================================= */
     post {
         failure {
             echo "❌ 배포 실패 — 롤백 메시지 전송"
             sh """
                 curl -H "Content-Type: application/json" \
-                -d '{ "content": ":x: GEULDA 배포 실패 — 롤백 진행됨" }' \
-                "$DISCORD_WEBHOOK"
+                    -d '{ "content": ":x: GEULDA 배포 실패 — 롤백 진행됨" }' \
+                    "$DISCORD_WEBHOOK"
             """
         }
     }
