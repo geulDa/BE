@@ -34,14 +34,14 @@ pipeline {
     stages {
 
         /* ---------------------------------------- */
-        stage('Git Checkout') {
-            steps {
-                echo "🔄 Git Checkout (${env.BRANCH_NAME})"
-                git branch: "${env.BRANCH_NAME}",
-                    credentialsId: 'github_Token',
-                    url: 'https://github.com/geulDa/BE.git'
-            }
-        }
+//         stage('Git Checkout') {
+//             steps {
+//                 echo "🔄 Git Checkout (${env.BRANCH_NAME})"
+//                 git branch: "${env.BRANCH_NAME}",
+//                     credentialsId: 'github_Token',
+//                     url: 'https://github.com/geulDa/BE.git'
+//             }
+//         }
 
         /* ---------------------------------------- */
         stage('Gradle Build') {
