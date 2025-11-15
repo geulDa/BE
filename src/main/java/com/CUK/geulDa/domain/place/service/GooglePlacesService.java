@@ -2,15 +2,22 @@ package com.CUK.geulDa.domain.place.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.Refill;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -24,6 +31,7 @@ public class GooglePlacesService {
 
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final Bucket rateLimitBucket;
 
     private static final String PLACES_TEXT_SEARCH_URL = "https://places.googleapis.com/v1/places:searchText";
     private static final String PLACES_NEARBY_SEARCH_URL = "https://places.googleapis.com/v1/places:searchNearby";
@@ -32,9 +40,18 @@ public class GooglePlacesService {
     public GooglePlacesService() {
         this.restTemplate = new RestTemplate();
         this.objectMapper = new ObjectMapper();
+
+        // Rate Limiting: 분당 최대 50회 API 호출
+        Bandwidth limit = Bandwidth.classic(50, Refill.intervally(50, Duration.ofMinutes(1)));
+        this.rateLimitBucket = Bucket.builder()
+                .addLimit(limit)
+                .build();
+
+        log.info("Google Places API Rate Limiter 초기화: 분당 50회");
     }
     public Optional<String> searchPlaceImageUrl(String placeName, String address, Double latitude, Double longitude) {
         try {
+            // API 호출
             String photoName = searchPlaceByText(placeName, address, latitude, longitude);
             if (photoName == null) {
                 return Optional.empty();
@@ -51,6 +68,12 @@ public class GooglePlacesService {
 
     private String searchPlaceByText(String placeName, String address, Double latitude, Double longitude) {
         try {
+            // Rate Limiting 체크
+            if (!rateLimitBucket.tryConsume(1)) {
+                log.warn("Google Places API Rate Limit 초과: placeName={}", placeName);
+                return null;
+            }
+
             String query = buildSearchQuery(placeName, address);
 
             HttpHeaders headers = new HttpHeaders();
@@ -96,8 +119,12 @@ public class GooglePlacesService {
 
             return null;
 
+        } catch (HttpClientErrorException e) {
+            return handleHttpError(e, placeName, "Text Search");
+        } catch (HttpServerErrorException e) {
+            return handleHttpError(e, placeName, "Text Search");
         } catch (Exception e) {
-            log.warn("Text Search 실패: {}", placeName);
+            log.warn("Text Search 실패: {}, error={}", placeName, e.getMessage());
             return null;
         }
     }
@@ -118,6 +145,13 @@ public class GooglePlacesService {
 
     public Optional<String> searchPlaceImageUrlByCoordinates(String placeName, String address, Double latitude, Double longitude) {
         try {
+            // Rate Limiting 체크
+            if (!rateLimitBucket.tryConsume(1)) {
+                log.warn("Google Places API Rate Limit 초과 (Nearby): placeName={}", placeName);
+                return Optional.empty();
+            }
+
+            // API 호출
             String keyword = buildSearchQuery(placeName, address);
             log.debug("Nearby Search (New API) 시작: keyword='{}', lat={}, lng={}", keyword, latitude, longitude);
 
@@ -168,15 +202,75 @@ public class GooglePlacesService {
 
                 String photoUrl = buildPhotoUrl(photoName, 800);
                 log.debug("Nearby Search: 이미지 URL 생성 완료 -> {}", photoUrl);
+
                 return Optional.of(photoUrl);
             }
 
             log.debug("Nearby Search: 사진 없음 (placeId={})", placeId);
             return Optional.empty();
 
+        } catch (HttpClientErrorException e) {
+            handleHttpErrorForOptional(e, placeName, "Nearby Search");
+            return Optional.empty();
+        } catch (HttpServerErrorException e) {
+            handleHttpErrorForOptional(e, placeName, "Nearby Search");
+            return Optional.empty();
         } catch (Exception e) {
             log.error("Nearby Search 예외: placeName={}, error={}", placeName, e.getMessage(), e);
             return Optional.empty();
         }
+    }
+
+    private String handleHttpError(RuntimeException e, String placeName, String apiType) {
+        HttpStatus statusCode = null;
+        String responseBody = null;
+
+        if (e instanceof HttpClientErrorException clientError) {
+            statusCode = HttpStatus.valueOf(clientError.getStatusCode().value());
+            responseBody = clientError.getResponseBodyAsString();
+        } else if (e instanceof HttpServerErrorException serverError) {
+            statusCode = HttpStatus.valueOf(serverError.getStatusCode().value());
+            responseBody = serverError.getResponseBodyAsString();
+        }
+
+        checkQuotaExceeded(statusCode, responseBody, placeName, apiType);
+        return null;
+    }
+
+    private void handleHttpErrorForOptional(RuntimeException e, String placeName, String apiType) {
+        HttpStatus statusCode = null;
+        String responseBody = null;
+
+        if (e instanceof HttpClientErrorException clientError) {
+            statusCode = HttpStatus.valueOf(clientError.getStatusCode().value());
+            responseBody = clientError.getResponseBodyAsString();
+        } else if (e instanceof HttpServerErrorException serverError) {
+            statusCode = HttpStatus.valueOf(serverError.getStatusCode().value());
+            responseBody = serverError.getResponseBodyAsString();
+        }
+
+        checkQuotaExceeded(statusCode, responseBody, placeName, apiType);
+    }
+
+    private void checkQuotaExceeded(HttpStatus statusCode, String responseBody, String placeName, String apiType) {
+        // HTTP 429 Too Many Requests 감지
+        if (statusCode == HttpStatus.TOO_MANY_REQUESTS) {
+            log.error("[Google Places API 할당량 초과] API={}, placeName={}, statusCode={}",
+                    apiType, placeName, statusCode);
+            log.error("응답 내용: {}", responseBody);
+            return;
+        }
+
+        // 응답 본문에서 RESOURCE_EXHAUSTED 감지
+        if (responseBody != null && responseBody.contains("RESOURCE_EXHAUSTED")) {
+            log.error("[Google Places API 할당량 초과] API={}, placeName={}, error=RESOURCE_EXHAUSTED",
+                    apiType, placeName);
+            log.error("응답 내용: {}", responseBody);
+            return;
+        }
+
+        // 기타 에러
+        log.warn("{} 실패: placeName={}, statusCode={}, error={}",
+                apiType, placeName, statusCode, responseBody);
     }
 }

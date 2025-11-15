@@ -49,6 +49,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
             key = "temp_token_exchange:" + ipAddress;
             bucket = resolveBucket(key, 10, Duration.ofMinutes(1));
         }
+        // 코스 추천 경로: IP 기반, 분당 30회
+        else if (path.equals("/api/courses/recommend")) {
+            String ipAddress = getClientIp(request);
+            key = "course_recommend:" + ipAddress;
+            bucket = resolveBucket(key, 30, Duration.ofMinutes(1));
+        }
 
         // Rate Limit 체크
         if (bucket != null) {
