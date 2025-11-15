@@ -139,9 +139,6 @@ public class CourseService {
         return courseRepository.findByIsHiddenFalse();
     }
 
-    /**
-     * AI 생성 장소를 DB에 저장 (선택적 사용)
-     */
     @Transactional
     public Course saveCourse(Course course) {
         // 중복 체크 (이름 + 주소)
@@ -155,5 +152,12 @@ public class CourseService {
 
         // 새 장소 저장
         return courseRepository.save(course);
+    }
+
+    @Transactional
+    public void updatePlaceImage(Long courseId, String imageUrl) {
+        courseRepository.findById(courseId).ifPresent(course -> {
+            course.updatePlaceImage(imageUrl);
+        });
     }
 }
