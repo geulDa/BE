@@ -45,7 +45,11 @@ public enum ErrorCode {
     AI_SESSION_NOT_FOUND(HttpStatus.NOT_FOUND, "E602", "세션을 찾을 수 없습니다."),
     AI_INVALID_REQUEST(HttpStatus.BAD_REQUEST, "E603", "AI 요청 형식이 올바르지 않습니다."),
     AI_NO_PLACES_FOUND(HttpStatus.NOT_FOUND, "E604", "검색된 장소가 없습니다."),
-    VECTOR_STORE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "E605", "벡터 스토어 처리 중 오류가 발생했습니다.");
+    VECTOR_STORE_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "E605", "벡터 스토어 처리 중 오류가 발생했습니다."),
+
+    // Google Places API 오류 (E700~E799)
+    GOOGLE_PLACES_QUOTA_EXCEEDED(HttpStatus.TOO_MANY_REQUESTS, "E700", "Google Places API 할당량이 초과되었습니다."),
+    GOOGLE_PLACES_API_ERROR(HttpStatus.BAD_GATEWAY, "E701", "Google Places API 호출에 실패했습니다.");
 
     private final HttpStatus httpStatus;
     private final String code;
