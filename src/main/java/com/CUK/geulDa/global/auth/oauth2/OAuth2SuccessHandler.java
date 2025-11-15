@@ -21,7 +21,7 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
     private final TokenService tokenService;
 
-    private static final String FRONTEND_URL = "http://localhost:3000";
+    private static final String FRONTEND_URL = "https://www.geulda.kr";
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,

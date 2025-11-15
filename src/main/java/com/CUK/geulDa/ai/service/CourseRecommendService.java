@@ -4,7 +4,6 @@ import com.CUK.geulDa.ai.dto.CourseRecommendResponse;
 import com.CUK.geulDa.ai.dto.RecommendRequest;
 import com.CUK.geulDa.ai.dto.SessionData;
 import com.CUK.geulDa.ai.mcp.BucheonTourMcpServer;
-import com.CUK.geulDa.domain.member.Member;
 import com.CUK.geulDa.domain.course.Course;
 import com.CUK.geulDa.domain.course.service.CourseService;
 import com.CUK.geulDa.domain.place.service.GooglePlacesService;
@@ -354,7 +353,7 @@ public class CourseRecommendService {
     }
 
     /**
-     * Course 객체로부터 실시간으로 Google Places API를 호출하여 이미지 URL 조회
+     * 최신 이미지 우선 + Rate Limit 시 DB 폴백 전략
      */
     private String getPlaceImageUrl(Course course) {
         if (course == null) {
@@ -362,7 +361,7 @@ public class CourseRecommendService {
         }
 
         try {
-            // 1차 시도: 장소명, 주소, 좌표로 이미지 검색
+            // 1단계: Google Places API 호출 (최신 이미지 우선)
             Optional<String> imageUrl = googlePlacesService.searchPlaceImageUrl(
                     course.getName(),
                     course.getAddress(),
@@ -371,11 +370,13 @@ public class CourseRecommendService {
             );
 
             if (imageUrl.isPresent()) {
-                log.debug("이미지 조회 성공: {} -> {}", course.getName(), imageUrl.get());
+                // API 성공 → DB 업데이트
+                courseService.updatePlaceImage(course.getId(), imageUrl.get());
+                log.debug("최신 이미지 조회 및 DB 업데이트: {}", course.getName());
                 return imageUrl.get();
             }
 
-            // 2차 시도: 좌표 기반 Nearby Search
+            // 2단계: Nearby Search 시도
             if (course.getLatitude() != null && course.getLongitude() != null) {
                 imageUrl = googlePlacesService.searchPlaceImageUrlByCoordinates(
                         course.getName(),
@@ -385,18 +386,28 @@ public class CourseRecommendService {
                 );
 
                 if (imageUrl.isPresent()) {
-                    log.debug("좌표 기반 이미지 조회 성공: {} -> {}", course.getName(), imageUrl.get());
+                    courseService.updatePlaceImage(course.getId(), imageUrl.get());
+                    log.debug("좌표 기반 이미지 조회 및 DB 업데이트: {}", course.getName());
                     return imageUrl.get();
                 }
             }
 
-            log.debug("이미지 조회 실패: {}", course.getName());
-            return null;
+            // 3단계: Rate Limit 또는 API 실패 → DB 조회
+            if (course.getPlaceImg() != null && !course.getPlaceImg().isEmpty()) {
+                log.debug("API 실패/Rate Limit, DB 이미지 사용: {}", course.getName());
+                return course.getPlaceImg();
+            }
 
         } catch (Exception e) {
-            log.warn("이미지 조회 중 오류 발생: {}", course.getName(), e);
-            return null;
+            log.warn("이미지 조회 중 오류, DB 조회 시도: {}", course.getName());
+            if (course.getPlaceImg() != null && !course.getPlaceImg().isEmpty()) {
+                return course.getPlaceImg();
+            }
         }
+
+        // 4단계: 모든 시도 실패 → null 반환
+        log.debug("이미지 조회 실패, null 반환: {}", course.getName());
+        return null;
     }
 
     private record MustVisitResult(List<Course> mustVisitPlaces, List<Course> candidates) {

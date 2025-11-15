@@ -84,4 +84,8 @@ public class Course extends BaseEntity {
         this.popularityScore = popularityScore != null ? popularityScore : 50;
         this.dataSource = dataSource != null ? dataSource : "manual";
     }
+
+    public void updatePlaceImage(String imageUrl) {
+        this.placeImg = imageUrl;
+    }
 }
