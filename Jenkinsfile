@@ -83,22 +83,17 @@ pipeline {
                 withCredentials([
                     usernamePassword(
                         credentialsId: 'aws-access-key',
-                        usernameVariable: 'TMP_AWS_ACCESS_KEY_ID',
-                        passwordVariable: 'TMP_AWS_SECRET_ACCESS_KEY'
+                        usernameVariable: 'AWS_ACCESS_KEY_ID',
+                        passwordVariable: 'AWS_SECRET_ACCESS_KEY'
                     )
                 ]) {
-                    sh '''
-                        export AWS_ACCESS_KEY_ID=$TMP_AWS_ACCESS_KEY_ID
-                        export AWS_SECRET_ACCESS_KEY=$TMP_AWS_SECRET_ACCESS_KEY
+                    script {
+                        // Jenkins 전체 환경에 직접 주입
+                        env.AWS_ACCESS_KEY_ID = AWS_ACCESS_KEY_ID
+                        env.AWS_SECRET_ACCESS_KEY = AWS_SECRET_ACCESS_KEY
 
-                        # Jenkins 전체 환경에 주입
-                        echo "AWS_ACCESS_KEY_ID=$TMP_AWS_ACCESS_KEY_ID" >> ~/.bashrc
-                        echo "AWS_SECRET_ACCESS_KEY=$TMP_AWS_SECRET_ACCESS_KEY" >> ~/.bashrc
-
-                        # 현재 세션에도 주입
-                        . ~/.bashrc
-                    '''
-                    echo "🔐 AWS Credentials 환경변수 등록 완료"
+                        echo "🔐 AWS Credentials Pipeline 환경변수 등록 완료"
+                    }
                 }
             }
         }
