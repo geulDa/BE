@@ -9,6 +9,8 @@ pipeline {
         IMAGE_NAME = "kyumin19/geulda-be"
         BRANCH_NAME = "main"
 
+        AWS_DEFAULT_REGION = "ap-northeast-2"
+
         AWX_URL = "http://34.64.206.170:30080"
         AWX_BLUE_TEMPLATE = "10"
         AWX_GREEN_TEMPLATE = "11"
