@@ -35,7 +35,7 @@ public class StampService {
     private final UserPostCardRepository userPostCardRepository;
 
     private static final double ACQUISITION_RADIUS_METERS = 5000.0;
-    private static final double HIDDEN_POSTCARD_PROBABILITY = 0.1; // 10% 확률
+    private static final double HIDDEN_POSTCARD_PROBABILITY = 0.4; // 40% 확률
     private final Random random = new Random();
 
 	public StampCollectionResponse getStampCollection(Member member) {
@@ -90,7 +90,7 @@ public class StampService {
         stamp.visited();
         stampRepository.save(stamp);
 
-        // 10% 확률로 히든 엽서 발급
+        // 40% 확률로 히든 엽서 발급
         boolean isHidden = random.nextDouble() < HIDDEN_POSTCARD_PROBABILITY;
 
         PostCard postCard = postCardRepository.findByPlaceIdAndIsHidden(placeId, isHidden)
