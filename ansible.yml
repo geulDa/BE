@@ -6,7 +6,7 @@
   vars:
     image_name: "kyumin19/geulda-be:latest"
     container_name: "geulda-app"
-    health_url: "http://localhost:{{ app_port }}/health"
+    health_url: "http://localhost:{{ app_port }}/actuator/health"
 
   tasks:
 

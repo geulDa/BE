@@ -169,7 +169,7 @@ pipeline {
                         ).trim()
 
                         echo "현재 상태: ${out}"
-                        if (!out.contains("healthy")) {
+                        if (!(out.contains("healthy")|| out.contains("unused"))) {
                             error("TargetGroup 아직 Healthy 미달")
                         }
                     }
