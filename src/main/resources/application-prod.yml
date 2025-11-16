@@ -74,6 +74,12 @@ spring:
           min-idle: 2
           max-wait: -1ms
 
+  cache:
+    type: redis
+    cache-names: place-images
+    redis:
+      time-to-live: 3600000
+
   ai:
     google:
       genai:

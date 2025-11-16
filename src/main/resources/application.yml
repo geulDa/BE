@@ -80,7 +80,7 @@ spring:
     type: redis
     cache-names: place-images
     redis:
-      time-to-live: 3600000 # 1 hour in milliseconds
+      time-to-live: 3600000
 
   ai:
     google:
