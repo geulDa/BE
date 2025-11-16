@@ -12,7 +12,6 @@
   <img src="https://img.shields.io/badge/Jenkins-D24939?style=flat&logo=jenkins&logoColor=white" />
   <img src="https://img.shields.io/badge/AWS S3-569A31?style=flat&logo=amazonaws&logoColor=white" />
   <img src="https://img.shields.io/badge/Gradle-3F51B5?style=flat&logo=Gradle&logoColor=white" />
-  <img src="https://img.shields.io/badge/Gradle-3F51B5?style=flat&logo=Gradle&logoColor=white" />
 </p>
 
 
