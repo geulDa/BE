@@ -30,10 +30,10 @@
 ---
 
 # 글다(geulDa)
-> [글다 이용하기](https://www.geulda.kr/)
+> [**글다 이용하기**](https://www.geulda.kr/)
 <img width="4068" height="1697" alt="image" src="https://github.com/user-attachments/assets/e32f0223-da7a-475d-99bb-f77fe5a64405" />
 
-## 🩵 서비스 소개
+## 💫 서비스 소개
 <img width="4314" height="1798" alt="image" src="https://github.com/user-attachments/assets/7f9bf6eb-ea17-4d44-8388-05d8638ee71a" />
 <img width="4314" height="1798" alt="image" src="https://github.com/user-attachments/assets/4d7daa9f-a3f4-4b12-ba00-a7f7e4dd7a31" />
 <img width="5752" height="1798" alt="image" src="https://github.com/user-attachments/assets/6b080ad6-c549-4903-8a8d-6ede5061d30c" />
