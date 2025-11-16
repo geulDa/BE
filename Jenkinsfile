@@ -16,7 +16,7 @@ pipeline {
         AWX_GREEN_TEMPLATE = "11"
         AWX_TOKEN = credentials('awx-token')
 
-        LISTENER_ARN = "arn:aws:elasticloadbalancing:ap-northeast-2:430118833260:loadbalancer/app/geulda-alb/c37d33ae4e691f29"
+        LISTENER_ARN = "arn:aws:elasticloadbalancing:ap-northeast-2:430118833260:listener/app/geulda-alb/c37d33ae4e691f29/80942d2924901550"
         BLUE_TG_ARN = "arn:aws:elasticloadbalancing:ap-northeast-2:430118833260:targetgroup/geulda-blue/418bbc5869d68f91"
         GREEN_TG_ARN = "arn:aws:elasticloadbalancing:ap-northeast-2:430118833260:targetgroup/geulda-green/5c5a4cf4abad3480"
 
