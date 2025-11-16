@@ -20,6 +20,9 @@ spring:
         dialect: org.hibernate.dialect.MySQL8Dialect
         jdbc:
           time_zone: Asia/Seoul
+          batch_size: 20
+        order_inserts: true
+        order_updates: true
 
   mvc:
     problemdetails:
@@ -72,6 +75,12 @@ spring:
           max-idle: 8
           min-idle: 2
           max-wait: -1ms
+
+  cache:
+    type: redis
+    cache-names: place-images
+    redis:
+      time-to-live: 3600000
 
   ai:
     google:

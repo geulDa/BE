@@ -155,6 +155,32 @@ public class CourseService {
     }
 
     @Transactional
+    public List<Course> saveAllCourses(List<Course> courses) {
+        List<Course> coursesToSave = new ArrayList<>();
+        List<Course> finalCourses = new ArrayList<>();
+
+        for (Course course : courses) {
+            // 중복 체크 (이름 + 주소)
+            List<Course> existing = courseRepository.findByNameContainingAndIsHiddenFalse(course.getName());
+            boolean isDuplicate = existing.stream()
+                    .anyMatch(existingCourse -> existingCourse.getAddress() != null &&
+                            existingCourse.getAddress().equals(course.getAddress()));
+
+            if (isDuplicate) {
+                finalCourses.add(existing.get(0));
+            } else {
+                coursesToSave.add(course);
+            }
+        }
+
+        if (!coursesToSave.isEmpty()) {
+            finalCourses.addAll(courseRepository.saveAll(coursesToSave));
+        }
+
+        return finalCourses;
+    }
+
+    @Transactional
     public void updatePlaceImage(Long courseId, String imageUrl) {
         courseRepository.findById(courseId).ifPresent(course -> {
             course.updatePlaceImage(imageUrl);

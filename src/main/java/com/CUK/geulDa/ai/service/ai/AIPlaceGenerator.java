@@ -86,7 +86,7 @@ public class AIPlaceGenerator {
                 return List.of();
             }
 
-            List<Course> generatedPlaces = new ArrayList<>();
+            List<Course> coursesToSave = new ArrayList<>();
             for (JsonNode placeNode : placesNode) {
                 try {
                     Course place = Course.builder()
@@ -104,18 +104,13 @@ public class AIPlaceGenerator {
                             .dataSource("AI_GENERATED")
                             .placeImg(null)
                             .build();
-
-                    Course savedPlace = courseService.saveCourse(place);
-                    generatedPlaces.add(savedPlace);
-                    log.debug("AI 생성: {} - {} ({})",
-                            savedPlace.getName(), savedPlace.getAddress(), savedPlace.getCategory());
-
+                    coursesToSave.add(place);
                 } catch (Exception e) {
                     log.warn("장소 파싱 실패", e);
                 }
             }
 
-            return generatedPlaces;
+            return courseService.saveAllCourses(coursesToSave);
 
         } catch (Exception e) {
             log.error("AI 장소 생성 실패", e);
@@ -187,7 +182,7 @@ public class AIPlaceGenerator {
                 return List.of();
             }
 
-            List<Course> generatedPlaces = new ArrayList<>();
+            List<Course> coursesToSave = new ArrayList<>();
             for (JsonNode placeNode : placesNode) {
                 try {
                     Course place = Course.builder()
@@ -206,17 +201,13 @@ public class AIPlaceGenerator {
                             .dataSource("AI_GENERATED")
                             .placeImg(null)
                             .build();
-
-                    Course savedPlace = courseService.saveCourse(place);
-                    generatedPlaces.add(savedPlace);
-                    log.debug("AI 생성: {} ({})", place.getName(), place.getAddress());
-
+                    coursesToSave.add(place);
                 } catch (Exception e) {
                     log.warn("장소 파싱 실패", e);
                 }
             }
 
-            return generatedPlaces;
+            return courseService.saveAllCourses(coursesToSave);
 
         } catch (Exception e) {
             log.error("AI 응답 파싱 실패", e);
