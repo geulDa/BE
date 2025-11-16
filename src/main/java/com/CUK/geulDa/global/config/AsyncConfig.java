@@ -16,15 +16,15 @@ public class AsyncConfig {
     @Bean(name = "vectorStoreExecutor")
     public Executor vectorStoreExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(3);
-        executor.setMaxPoolSize(5);
-        executor.setQueueCapacity(100);
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(3);
+        executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("vector-store-");
         executor.setWaitForTasksToCompleteOnShutdown(true);
         executor.setAwaitTerminationSeconds(60);
         executor.initialize();
-        executor.getCorePoolSize();
-        executor.getMaxPoolSize();
+        log.info("Vector Store Executor 초기화 완료 - core: {}, max: {}, queue: {}",
+                executor.getCorePoolSize(), executor.getMaxPoolSize(), executor.getQueueCapacity());
 
         return executor;
     }

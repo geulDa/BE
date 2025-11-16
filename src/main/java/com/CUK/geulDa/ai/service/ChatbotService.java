@@ -42,7 +42,7 @@ public class ChatbotService {
     @Value("${geulda.vector-store.path:vector-store.json}")
     private String vectorStorePath;
 
-    private static final int BATCH_SIZE = 50;
+    private static final int BATCH_SIZE = 20;
 
     private volatile boolean isVectorStoreReady = false;
 

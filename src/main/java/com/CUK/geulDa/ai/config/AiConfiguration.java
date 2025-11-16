@@ -9,6 +9,7 @@ import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Lazy;
 
 import java.io.File;
 
@@ -25,7 +26,9 @@ public class AiConfiguration {
     }
 
     @Bean
+    @Lazy
     public VectorStore vectorStore(EmbeddingModel embeddingModel) {
+        log.info("🔄 Vector Store 빈 초기화 시작 (Lazy Loading)");
         File vectorFile = new File(vectorStorePath);
 
         SimpleVectorStore vectorStore = SimpleVectorStore.builder(embeddingModel).build();
