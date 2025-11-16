@@ -202,16 +202,58 @@ pipeline {
     }
 
     /* =======================================================================
-     * 실패 알림
+     * 실패 시 자동 롤백 및 알림
      * ======================================================================= */
     post {
         failure {
-            echo "❌ 배포 실패 — 롤백 메시지 전송"
-            sh """
-                curl -H "Content-Type: application/json" \
-                    -d '{ "content": ":x: GEULDA 배포 실패 — 롤백 진행됨" }' \
-                    "$DISCORD_WEBHOOK"
-            """
+            script {
+                echo "❌ 배포 실패 감지 — 자동 롤백 시작"
+
+                // 배포 실패 시 이전 Target Group으로 롤백
+                if (env.DEPLOY_TARGET) {
+                    def previousTG = (env.DEPLOY_TARGET == "blue") ? env.GREEN_TG_ARN : env.BLUE_TG_ARN
+                    def previousColor = (env.DEPLOY_TARGET == "blue") ? "GREEN" : "BLUE"
+
+                    try {
+                        echo "🔄 ${previousColor} 환경으로 롤백 중..."
+
+                        sh """
+                            aws elbv2 modify-listener \
+                                --listener-arn ${LISTENER_ARN} \
+                                --default-actions Type=forward,TargetGroupArn=${previousTG}
+                        """
+
+                        echo "✅ 롤백 완료: ${previousColor} 환경으로 복구됨"
+
+                        // 롤백 성공 알림
+                        sh """
+                            curl -H "Content-Type: application/json" \
+                                -d '{"content": ":warning: **GEULDA 배포 실패 - 자동 롤백 완료**\\n- 실패한 환경: ${env.DEPLOY_TARGET.toUpperCase()}\\n- 복구된 환경: ${previousColor}\\n- 상태: 정상 운영 중"}' \
+                                "$DISCORD_WEBHOOK"
+                        """
+                    } catch (Exception e) {
+                        echo "❌ 롤백 실패: ${e.message}"
+
+                        // 롤백 실패 긴급 알림
+                        sh """
+                            curl -H "Content-Type: application/json" \
+                                -d '{"content": ":rotating_light: **긴급: GEULDA 배포 실패 및 롤백 실패**\\n- 즉시 수동 확인 필요\\n- 에러: ${e.message}"}' \
+                                "$DISCORD_WEBHOOK"
+                        """
+                    }
+                } else {
+                    // DEPLOY_TARGET이 없는 경우 (빌드 단계 실패 등)
+                    sh """
+                        curl -H "Content-Type: application/json" \
+                            -d '{"content": ":x: **GEULDA 빌드 실패**\\n- 배포 전 단계에서 실패\\n- 현재 운영 환경은 영향 없음"}' \
+                            "$DISCORD_WEBHOOK"
+                    """
+                }
+            }
+        }
+
+        success {
+            echo "✅ 배포 파이프라인 성공적으로 완료"
         }
     }
 }
