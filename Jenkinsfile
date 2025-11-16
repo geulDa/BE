@@ -42,6 +42,7 @@ pipeline {
                     echo "org.gradle.caching=true" >> ~/.gradle/gradle.properties
                     echo "org.gradle.parallel=true" >> ~/.gradle/gradle.properties
                     echo "org.gradle.configureondemand=true" >> ~/.gradle/gradle.properties
+                    echo "org.gradle.jvmargs=-Xmx1024m -XX:MaxMetaspaceSize=256m" >> ~/.gradle/gradle.properties
 
                     chmod +x ./gradlew
                     ./gradlew clean build -x test --parallel --configure-on-demand

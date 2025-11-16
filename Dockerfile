@@ -29,4 +29,14 @@ COPY --from=builder /app/build/libs/*SNAPSHOT.jar app.jar
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar", "--spring.profiles.active=prod"]
+# t2.micro (1GB RAM) 환경을 위한 JVM 메모리 최적화
+ENTRYPOINT ["java", \
+    "-Xms256m", \
+    "-Xmx512m", \
+    "-XX:MaxMetaspaceSize=128m", \
+    "-XX:+UseG1GC", \
+    "-XX:MaxGCPauseMillis=200", \
+    "-XX:+HeapDumpOnOutOfMemoryError", \
+    "-XX:HeapDumpPath=/app/logs", \
+    "-jar", "app.jar", \
+    "--spring.profiles.active=prod"]
