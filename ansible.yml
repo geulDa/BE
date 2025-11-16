@@ -22,9 +22,9 @@
         --name {{ container_name }} \
         --env-file /home/ubuntu/.env \
         -p {{ app_port }}:8080 \
-        --memory="700m" \
-        --memory-reservation="512m" \
-        --memory-swap="700m" \
+        --memory="550m" \
+        --memory-reservation="400m" \
+        --memory-swap="550m" \
         --oom-kill-disable=false \
         --restart unless-stopped \
         {{ image_name }}

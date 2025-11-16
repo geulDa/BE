@@ -41,12 +41,20 @@ USER appuser
 EXPOSE 8080
 
 ENTRYPOINT ["java", \
-    "-Xms256m", \
+    "-Xms128m", \
     "-Xmx512m", \
-    "-XX:MaxMetaspaceSize=128m", \
-    "-XX:+UseG1GC", \
-    "-XX:MaxGCPauseMillis=200", \
-    "-XX:+HeapDumpOnOutOfMemoryError", \
-    "-XX:HeapDumpPath=/app/logs", \
+    "-XX:MaxMetaspaceSize=96m", \
+    "-XX:ReservedCodeCacheSize=64m", \
+    "-XX:+UseSerialGC", \
+    "-XX:MinHeapFreeRatio=20", \
+    "-XX:MaxHeapFreeRatio=40", \
+    "-XX:GCTimeRatio=4", \
+    "-XX:AdaptiveSizePolicyWeight=90", \
+    "-Xss256k", \
+    "-XX:+TieredCompilation", \
+    "-XX:TieredStopAtLevel=1", \
+    "-XX:+UseStringDeduplication", \
+    "-Djava.security.egd=file:/dev/./urandom", \
+    "-Dspring.backgroundpreinitializer.ignore=true", \
     "-jar", "app.jar", \
     "--spring.profiles.active=prod"]
