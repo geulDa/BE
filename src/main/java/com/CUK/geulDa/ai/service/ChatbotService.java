@@ -25,7 +25,6 @@ import java.io.File;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @Service
@@ -42,7 +41,7 @@ public class ChatbotService {
     @Value("${geulda.vector-store.path:vector-store.json}")
     private String vectorStorePath;
 
-    private static final int BATCH_SIZE = 20;
+    private static final int BATCH_SIZE = 15;
 
     private volatile boolean isVectorStoreReady = false;
 
@@ -72,37 +71,39 @@ public class ChatbotService {
             log.info("🔄 벡터 스토어 최초 생성 시작... (백그라운드)");
             long startTime = System.currentTimeMillis();
 
-            // 1. 데이터 조회
-            List<Course> courses = courseService.getAllVisibleCourses();
-            List<Document> documents = courses.stream()
-                    .filter(course -> StringUtils.hasText(course.getDescription()))
-                    .map(course -> new Document(
-                            course.getId().toString(),
-                            buildDocumentContent(course),
-                            buildDocumentMetadata(course)
-                    ))
-                    .toList();
+            // 페이징 기반 처리 (전체 로드 안함)
+            final int[] totalProcessed = {0};
+            final int[] batchNum = {0};
 
-            if (documents.isEmpty()) {
+            courseService.processCoursesInBatches(BATCH_SIZE, courses -> {
+                List<Document> documents = courses.stream()
+                        .filter(course -> StringUtils.hasText(course.getDescription()))
+                        .map(course -> new Document(
+                                course.getId().toString(),
+                                buildDocumentContent(course),
+                                buildDocumentMetadata(course)
+                        ))
+                        .toList();
+
+                if (!documents.isEmpty()) {
+                    try {
+                        vectorStore.add(documents);
+                        totalProcessed[0] += documents.size();
+                        log.info("✓ 배치 {} 완료: {}개 문서 (누적: {}개)",
+                                ++batchNum[0], documents.size(), totalProcessed[0]);
+                    } catch (Exception e) {
+                        log.error("❌ 배치 처리 실패", e);
+                        throw new RuntimeException("배치 처리 실패", e);
+                    }
+                }
+            });
+
+            if (totalProcessed[0] == 0) {
                 log.warn("⚠️ 벡터 스토어에 추가할 장소가 없습니다");
                 return;
             }
 
-            // 2. 배치로 분할
-            List<List<Document>> batches = partitionList(documents, BATCH_SIZE);
-            log.info("📦 총 {}개 문서를 {}개 배치로 분할 (배치 크기: {})",
-                    documents.size(), batches.size(), BATCH_SIZE);
-
-            // 3. 병렬 처리
-            List<CompletableFuture<Void>> futures = batches.stream()
-                    .map(this::processBatchAsync)
-                    .collect(Collectors.toList());
-
-            // 4. 모든 배치 완료 대기
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                    .join();
-
-            // 5. 파일로 저장
+            // 파일로 저장
             File vectorFile = new File(vectorStorePath);
             if (vectorStore instanceof SimpleVectorStore simpleStore) {
                 simpleStore.save(vectorFile);
@@ -112,7 +113,7 @@ public class ChatbotService {
             }
 
             isVectorStoreReady = true;
-            log.info("✅ 벡터 스토어 초기화 완료! (총 {}개 장소)", documents.size());
+            log.info("✅ 벡터 스토어 초기화 완료! (총 {}개 장소)", totalProcessed[0]);
 
         } catch (Exception e) {
             log.error("❌ 벡터 스토어 초기화 실패", e);
@@ -145,37 +146,39 @@ public class ChatbotService {
                 log.info("📁 기존 벡터 파일 삭제: {}", deleted);
             }
 
-            // 2. 데이터 조회 및 Document 변환
-            List<Course> courses = courseService.getAllVisibleCourses();
-            List<Document> documents = courses.stream()
-                    .filter(course -> StringUtils.hasText(course.getDescription()))
-                    .map(course -> new Document(
-                            course.getId().toString(),
-                            buildDocumentContent(course),
-                            buildDocumentMetadata(course)
-                    ))
-                    .toList();
+            // 2. 페이징 기반 처리
+            final int[] totalProcessed = {0};
+            final int[] batchNum = {0};
 
-            if (documents.isEmpty()) {
+            courseService.processCoursesInBatches(BATCH_SIZE, courses -> {
+                List<Document> documents = courses.stream()
+                        .filter(course -> StringUtils.hasText(course.getDescription()))
+                        .map(course -> new Document(
+                                course.getId().toString(),
+                                buildDocumentContent(course),
+                                buildDocumentMetadata(course)
+                        ))
+                        .toList();
+
+                if (!documents.isEmpty()) {
+                    try {
+                        vectorStore.add(documents);
+                        totalProcessed[0] += documents.size();
+                        log.info("✓ 배치 {} 완료: {}개 문서 (누적: {}개)",
+                                ++batchNum[0], documents.size(), totalProcessed[0]);
+                    } catch (Exception e) {
+                        log.error("❌ 배치 처리 실패", e);
+                        throw new RuntimeException("배치 처리 실패", e);
+                    }
+                }
+            });
+
+            if (totalProcessed[0] == 0) {
                 log.warn("⚠️ 벡터 스토어에 추가할 장소가 없습니다");
                 return;
             }
 
-            // 3. 배치로 분할
-            List<List<Document>> batches = partitionList(documents, BATCH_SIZE);
-            log.info("📦 총 {}개 문서를 {}개 배치로 분할 (배치 크기: {})",
-                    documents.size(), batches.size(), BATCH_SIZE);
-
-            // 4. 병렬 처리
-            List<CompletableFuture<Void>> futures = batches.stream()
-                    .map(this::processBatchAsync)
-                    .collect(Collectors.toList());
-
-            // 5. 모든 배치 완료 대기
-            CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                    .join();
-
-            // 6. 파일로 저장
+            // 3. 파일로 저장
             if (vectorStore instanceof SimpleVectorStore simpleStore) {
                 simpleStore.save(vectorFile);
                 long elapsed = (System.currentTimeMillis() - startTime) / 1000;
@@ -185,7 +188,7 @@ public class ChatbotService {
 
             isVectorStoreReady = true;
             log.info("✅ 벡터 스토어 재생성 완료! (총 {}개 장소, {}초 소요)",
-                    documents.size(), (System.currentTimeMillis() - startTime) / 1000);
+                    totalProcessed[0], (System.currentTimeMillis() - startTime) / 1000);
 
         } catch (Exception e) {
             log.error("❌ 벡터 스토어 재생성 실패", e);
@@ -193,30 +196,6 @@ public class ChatbotService {
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR,
                     "벡터 스토어 재생성 중 오류가 발생했습니다.");
         }
-    }
-
-    /**
-     * 배치 비동기 처리 (병렬 실행)
-     */
-    @Async("vectorStoreExecutor")
-    public CompletableFuture<Void> processBatchAsync(List<Document> batch) {
-        return CompletableFuture.runAsync(() -> {
-            try {
-                vectorStore.add(batch);
-                log.info("✓ 배치 완료: {}개 문서", batch.size());
-            } catch (Exception e) {
-                log.error("❌ 배치 처리 실패", e);
-                throw new RuntimeException("배치 처리 실패", e);
-            }
-        });
-    }
-
-    private <T> List<List<T>> partitionList(List<T> list, int batchSize) {
-        List<List<T>> batches = new ArrayList<>();
-        for (int i = 0; i < list.size(); i += batchSize) {
-            batches.add(list.subList(i, Math.min(i + batchSize, list.size())));
-        }
-        return batches;
     }
 
     public boolean isVectorStoreReady() {

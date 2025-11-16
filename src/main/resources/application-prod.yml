@@ -8,12 +8,12 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 5           # 메모리 최적화
-      minimum-idle: 2                # 메모리 최적화
-      connection-timeout: 20000      # 연결 타임아웃 20초
-      idle-timeout: 300000           # 유휴 타임아웃 5분 (300초)
-      max-lifetime: 1800000          # 연결 최대 수명 30분 (Multi-AZ failover 대비)
-      leak-detection-threshold: 60000 # 연결 누수 감지 1분
+      maximum-pool-size: 8
+      minimum-idle: 3
+      connection-timeout: 20000
+      idle-timeout: 300000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
 
   jpa:
     hibernate:
@@ -76,10 +76,10 @@ spring:
       timeout: 3000ms
       lettuce:
         pool:
-          max-active: 3        # 메모리 극한 최적화: 8 → 3
-          max-idle: 2          # 메모리 극한 최적화: 8 → 2
-          min-idle: 1          # 메모리 극한 최적화: 2 → 1
-          max-wait: 3000ms     # 타임아웃 설정
+          max-active: 3
+          max-idle: 2
+          min-idle: 1
+          max-wait: 3000ms
         shutdown-timeout: 100ms
 
   cache:
@@ -130,24 +130,21 @@ management:
     health:
       show-details: always
 
-# =========================================
-# 메모리 극한 최적화 설정
-# =========================================
 server:
   tomcat:
     threads:
-      max: 50              # 기본 200 → 50 (메모리 절약)
-      min-spare: 5         # 기본 10 → 5
-    max-connections: 2000  # 기본 8192 → 2000
-    accept-count: 50       # 기본 100 → 50
+      max: 30
+      min-spare: 3
+    max-connections: 1000
+    accept-count: 30
     connection-timeout: 20s
   compression:
-    enabled: true          # 응답 압축으로 대역폭 절약
+    enabled: true
     mime-types: application/json,application/xml,text/html,text/xml,text/plain
 
 logging:
   level:
-    root: WARN             # INFO → WARN (로그 메모리 절약)
+    root: WARN
     com.CUK.geulDa: INFO
     org.springframework: WARN
     org.hibernate: WARN

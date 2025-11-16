@@ -17,7 +17,7 @@ public class AsyncConfig {
     public Executor vectorStoreExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
-        executor.setMaxPoolSize(3);
+        executor.setMaxPoolSize(4);
         executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("vector-store-");
         executor.setWaitForTasksToCompleteOnShutdown(true);

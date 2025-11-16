@@ -3,11 +3,13 @@ package com.CUK.geulDa.domain.course.service;
 import com.CUK.geulDa.domain.course.Course;
 import com.CUK.geulDa.domain.course.repository.CourseRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
-import java.util.stream.Collectors;
+import java.util.function.Consumer;
 
 @Service
 @RequiredArgsConstructor
@@ -41,38 +43,42 @@ public class CourseService {
             default -> purpose;
         };
 
-        // 1. 목적에 맞는 장소 필터링
-        List<Course> filtered = courses.stream()
-                .filter(course -> {
-                    List<String> tags = getTourPurposeTags(course);
-                    return tags.contains(purpose) || tags.contains(koreanPurpose);
-                })
-                .toList();
-
-        // 2. 카테고리별로 그룹화
-        Map<String, List<Course>> byCategory = filtered.stream()
-                .collect(Collectors.groupingBy(
-                        course -> course.getCategory() != null ? course.getCategory() : "기타"
-                ));
-
-        // 3. 카테고리별 우선순위 (데이트 목적 기준)
+        // OOM 방지: 중간 컬렉션 생성 최소화
         List<String> categoryPriority = "dating".equals(purpose) || "데이트".equals(koreanPurpose)
                 ? List.of("자연", "문화시설", "카페", "음식점", "쇼핑", "기타")
                 : List.of("문화시설", "자연", "음식점", "카페", "쇼핑", "기타");
 
-        // 4. 카테고리별로 가중치 랜덤 샘플링 (각 카테고리에서 최대 3개씩)
-        List<Course> balanced = new ArrayList<>();
+        List<Course> result = new ArrayList<>(18); // 6 카테고리 × 3개 = 18
         Random random = new Random();
 
+        // 카테고리별로 직접 필터링 (Map 생성 없이)
         for (String category : categoryPriority) {
-            List<Course> categoryCourses = byCategory.getOrDefault(category, List.of());
+            List<Course> categoryCourses = new ArrayList<>(10);
 
-            // 인기도 기반 가중치 랜덤 샘플링
+            for (Course course : courses) {
+                if (matchesPurposeAndCategory(course, purpose, koreanPurpose, category)) {
+                    categoryCourses.add(course);
+                    if (categoryCourses.size() >= 10) break; // 조기 종료
+                }
+            }
+
             List<Course> sampled = weightedRandomSample(categoryCourses, 3, random);
-            balanced.addAll(sampled);
+            result.addAll(sampled);
         }
 
-        return balanced;
+        return result;
+    }
+
+    private boolean matchesPurposeAndCategory(Course course, String purpose, String koreanPurpose, String category) {
+        // 카테고리 체크
+        String courseCategory = course.getCategory() != null ? course.getCategory() : "기타";
+        if (!courseCategory.equals(category)) {
+            return false;
+        }
+
+        // 목적 태그 체크
+        List<String> tags = getTourPurposeTags(course);
+        return tags.contains(purpose) || tags.contains(koreanPurpose);
     }
 
     /**
@@ -137,6 +143,23 @@ public class CourseService {
 
     public List<Course> getAllVisibleCourses() {
         return courseRepository.findByIsHiddenFalse();
+    }
+
+    /**
+     * OOM 방지: 페이징 기반 배치 처리
+     * 전체 Course를 한 번에 로드하지 않고 배치 단위로 처리
+     */
+    @Transactional(readOnly = true)
+    public void processCoursesInBatches(int pageSize, Consumer<List<Course>> processor) {
+        int page = 0;
+        Page<Course> coursePage;
+
+        do {
+            coursePage = courseRepository.findByIsHiddenFalse(PageRequest.of(page++, pageSize));
+            if (!coursePage.isEmpty()) {
+                processor.accept(coursePage.getContent());
+            }
+        } while (coursePage.hasNext());
     }
 
     @Transactional

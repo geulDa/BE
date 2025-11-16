@@ -42,9 +42,9 @@ EXPOSE 8080
 
 ENTRYPOINT ["java", \
     "-Xms128m", \
-    "-Xmx500m", \
-    "-XX:MaxMetaspaceSize=80m", \
-    "-XX:ReservedCodeCacheSize=48m", \
+    "-Xmx450m", \
+    "-XX:MaxMetaspaceSize=90m", \
+    "-XX:ReservedCodeCacheSize=50m", \
     "-XX:+UseSerialGC", \
     "-XX:MinHeapFreeRatio=20", \
     "-XX:MaxHeapFreeRatio=40", \
