@@ -1,4 +1,4 @@
-FROM eclipse-temurin:17-jdk AS builder
+FROM eclipse-temurin:17-jdk-alpine AS builder
 
 WORKDIR /app
 
@@ -16,20 +16,30 @@ COPY src src
 RUN chmod +x ./gradlew && \
     ./gradlew clean build -x test --no-daemon
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
 # 타임존 설정 (한국 시간)
 ENV TZ=Asia/Seoul
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+RUN apk add --no-cache tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && \
+    echo $TZ > /etc/timezone
+
+# 보안: non-root 사용자 생성 및 로그 디렉토리 생성
+RUN addgroup -S appgroup && \
+    adduser -S appuser -G appgroup && \
+    mkdir -p /app/logs && \
+    chown -R appuser:appgroup /app
 
 # 빌드 단계에서 생성된 jar 파일 복사
-COPY --from=builder /app/build/libs/*SNAPSHOT.jar app.jar
+COPY --from=builder --chown=appuser:appgroup /app/build/libs/*SNAPSHOT.jar app.jar
+
+# non-root 사용자로 전환
+USER appuser
 
 EXPOSE 8080
 
-# t2.micro (1GB RAM) 환경을 위한 JVM 메모리 최적화
 ENTRYPOINT ["java", \
     "-Xms256m", \
     "-Xmx512m", \
