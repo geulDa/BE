@@ -51,9 +51,9 @@ pipeline {
         }
 
         /* =======================================================================
-         * 2. Docker Build + Cache
+         * 2. Docker Build + Push (항상 최신 코드 보장)
          * ======================================================================= */
-        stage('Docker Build & Push (Layer Cache)') {
+        stage('Docker Build & Push (No Cache)') {
             when { branch 'main' }
             steps {
                 withCredentials([usernamePassword(
@@ -61,15 +61,22 @@ pipeline {
                     usernameVariable: 'DOCKER_USER',
                     passwordVariable: 'DOCKER_PASS'
                 )]) {
-                    echo "🐳 Docker Build with Layer Cache"
+                    echo "🐳 Docker Build - 항상 최신 코드로 빌드"
 
                     sh '''
+                        # 이전 빌드 이미지 정리 (선택적)
+                        docker rmi $IMAGE_NAME:latest 2>/dev/null || true
+
+                        # 캐시 없이 항상 최신 코드로 빌드
                         docker build \
-                            --cache-from=$IMAGE_NAME:latest \
+                            --no-cache \
+                            --pull \
                             -t $IMAGE_NAME:latest .
 
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
                         docker push $IMAGE_NAME:latest
+
+                        echo "✅ Docker 이미지 빌드 및 푸시 완료: $IMAGE_NAME:latest"
                     '''
                 }
             }
