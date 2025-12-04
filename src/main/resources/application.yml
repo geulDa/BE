@@ -83,6 +83,11 @@ spring:
       time-to-live: 3600000
 
   ai:
+    retry:
+      max-attempts: 5
+      backoff:
+        initial-interval: 2000
+        max-interval: 10000
     google:
       genai:
         api-key: ${GEMINI_API_KEY}
@@ -96,6 +101,7 @@ spring:
           text:
             options:
               model: text-embedding-004
+              timeout: 30s
 
 jwt:
   secret: ${JWT_SECRET}

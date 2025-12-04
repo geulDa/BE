@@ -41,7 +41,9 @@ public class ChatbotService {
     @Value("${geulda.vector-store.path:vector-store.json}")
     private String vectorStorePath;
 
-    private static final int BATCH_SIZE = 15;
+    private static final int BATCH_SIZE = 5;  // API 안정성을 위해 배치 크기 축소
+    private static final int EMBEDDING_DELAY_MS = 400;  // 각 임베딩 사이 0.4초 대기
+    private static final int MAX_RETRIES = 3;  // 최대 재시도 횟수
 
     private volatile boolean isVectorStoreReady = false;
 
@@ -86,15 +88,33 @@ public class ChatbotService {
                         .toList();
 
                 if (!documents.isEmpty()) {
-                    try {
-                        vectorStore.add(documents);
-                        totalProcessed[0] += documents.size();
-                        log.info("✓ 배치 {} 완료: {}개 문서 (누적: {}개)",
-                                ++batchNum[0], documents.size(), totalProcessed[0]);
-                    } catch (Exception e) {
-                        log.error("❌ 배치 처리 실패", e);
-                        throw new RuntimeException("배치 처리 실패", e);
+                    batchNum[0]++;
+                    log.info("🔄 배치 {} 시작: {}개 문서 처리 중...", batchNum[0], documents.size());
+
+                    // 각 문서를 개별적으로 처리하여 API rate limit 문제 방지
+                    for (int i = 0; i < documents.size(); i++) {
+                        Document doc = documents.get(i);
+                        boolean success = addDocumentWithRetry(doc, i + 1, documents.size());
+
+                        if (success) {
+                            totalProcessed[0]++;
+
+                            // 마지막 문서가 아니면 API rate limit을 위해 대기
+                            if (i < documents.size() - 1) {
+                                try {
+                                    Thread.sleep(EMBEDDING_DELAY_MS);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                    log.warn("⚠️ 대기 중 인터럽트 발생");
+                                }
+                            }
+                        } else {
+                            log.warn("⚠️ 문서 추가 실패 (ID: {}), 계속 진행...", doc.getId());
+                        }
                     }
+
+                    log.info("✓ 배치 {} 완료: {}개 문서 성공 (누적: {}개)",
+                            batchNum[0], documents.size(), totalProcessed[0]);
                 }
             });
 
@@ -161,15 +181,33 @@ public class ChatbotService {
                         .toList();
 
                 if (!documents.isEmpty()) {
-                    try {
-                        vectorStore.add(documents);
-                        totalProcessed[0] += documents.size();
-                        log.info("✓ 배치 {} 완료: {}개 문서 (누적: {}개)",
-                                ++batchNum[0], documents.size(), totalProcessed[0]);
-                    } catch (Exception e) {
-                        log.error("❌ 배치 처리 실패", e);
-                        throw new RuntimeException("배치 처리 실패", e);
+                    batchNum[0]++;
+                    log.info("🔄 배치 {} 시작: {}개 문서 처리 중...", batchNum[0], documents.size());
+
+                    // 각 문서를 개별적으로 처리하여 API rate limit 문제 방지
+                    for (int i = 0; i < documents.size(); i++) {
+                        Document doc = documents.get(i);
+                        boolean success = addDocumentWithRetry(doc, i + 1, documents.size());
+
+                        if (success) {
+                            totalProcessed[0]++;
+
+                            // 마지막 문서가 아니면 API rate limit을 위해 대기
+                            if (i < documents.size() - 1) {
+                                try {
+                                    Thread.sleep(EMBEDDING_DELAY_MS);
+                                } catch (InterruptedException e) {
+                                    Thread.currentThread().interrupt();
+                                    log.warn("⚠️ 대기 중 인터럽트 발생");
+                                }
+                            }
+                        } else {
+                            log.warn("⚠️ 문서 추가 실패 (ID: {}), 계속 진행...", doc.getId());
+                        }
                     }
+
+                    log.info("✓ 배치 {} 완료: {}개 문서 성공 (누적: {}개)",
+                            batchNum[0], documents.size(), totalProcessed[0]);
                 }
             });
 
@@ -200,6 +238,51 @@ public class ChatbotService {
 
     public boolean isVectorStoreReady() {
         return isVectorStoreReady;
+    }
+
+    private boolean addDocumentWithRetry(Document doc, int docIndex, int totalDocs) {
+        int attempt = 0;
+        Exception lastException = null;
+
+        while (attempt < MAX_RETRIES) {
+            try {
+                attempt++;
+                if (attempt > 1) {
+                    log.info("🔁 재시도 {}/{}: 문서 {}/{} (ID: {})",
+                            attempt, MAX_RETRIES, docIndex, totalDocs, doc.getId());
+                }
+
+                // 단일 문서를 리스트로 감싸서 추가
+                vectorStore.add(List.of(doc));
+
+                if (attempt > 1) {
+                    log.info("✅ 재시도 성공: 문서 {}/{}", docIndex, totalDocs);
+                }
+                return true;
+
+            } catch (Exception e) {
+                lastException = e;
+                log.warn("⚠️ 문서 추가 실패 ({}/{}): {} - {}",
+                        attempt, MAX_RETRIES, doc.getId(), e.getMessage());
+
+                if (attempt < MAX_RETRIES) {
+                    // Exponential backoff: 2초, 4초, 8초
+                    long backoffMs = (long) Math.pow(2, attempt) * 1000;
+                    try {
+                        log.info("⏳ {}초 후 재시도...", backoffMs / 1000);
+                        Thread.sleep(backoffMs);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        log.error("❌ 대기 중 인터럽트 발생");
+                        return false;
+                    }
+                }
+            }
+        }
+
+        log.error("❌ 최대 재시도 횟수 초과: 문서 {} (ID: {})",
+                docIndex, doc.getId(), lastException);
+        return false;
     }
 
     private String buildDocumentContent(Course course) {
