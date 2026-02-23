@@ -32,6 +32,5 @@
 <img width="5752" height="1798" alt="image" src="https://github.com/user-attachments/assets/6b080ad6-c549-4903-8a8d-6ede5061d30c" />
 <img width="4314" height="1798" alt="image" src="https://github.com/user-attachments/assets/c3994407-a3b8-4630-b4ba-6e8555d011ce" />
 
-## 💻 아키텍처 & ERD
+## 💻 아키텍처
 <img width="3840" height="2160" alt="글다 아키텍처 (7)" src="https://github.com/user-attachments/assets/77f14aca-052b-4f34-8214-431079e1f2ce" />
-<img width="1621" height="1669" alt="ERD_민민민민민수" src="https://github.com/user-attachments/assets/9e7024ec-362f-46a4-9130-1f989a3579ce" />
